@@ -1,0 +1,3 @@
+# Файл .dockerignore
+build
+node_modules
