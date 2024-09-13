@@ -8,9 +8,8 @@ from users.models import User
 class Ingredient(models.Model):
     """Модель Ингредиента."""
 
-    name = models.CharField(verbose_name='Название', max_length=150)
-    measurement_unit = models.CharField(verbose_name='Единица измерения',
-                                        max_length=32)
+    name = models.CharField('Название', max_length=150)
+    measurement_unit = models.CharField('Единица измерения', max_length=32)
 
     class Meta:
         ordering = ['name']
@@ -22,12 +21,10 @@ class Ingredient(models.Model):
 
 
 class Tag(models.Model):
-    """Модель Тэга."""
+    """Модель Тега."""
 
-    name = models.CharField(verbose_name='Название', unique=True,
-                            max_length=32)
-    slug = models.SlugField(verbose_name='Уникальный слаг', unique=True,
-                            max_length=32)
+    name = models.CharField('Название', unique=True, max_length=32)
+    slug = models.SlugField('Уникальный слаг', unique=True, max_length=32)
 
     class Meta:
         verbose_name = 'Тег'
@@ -40,14 +37,14 @@ class Tag(models.Model):
 class Recipe(models.Model):
     """Модель Рецепта."""
 
-    name = models.CharField(verbose_name='Название', max_length=256)
+    name = models.CharField('Название', max_length=256)
     author = models.ForeignKey(
         User,
         related_name='recipes',
         on_delete=models.CASCADE,
         verbose_name='Автор',
     )
-    text = models.TextField(verbose_name='Описание')
+    text = models.TextField('Описание')
     image = models.ImageField('Изображение', upload_to='media/recipes/')
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время приготовления',
@@ -59,8 +56,11 @@ class Recipe(models.Model):
         related_name='recipes',
         verbose_name='Ингредиенты',
     )
-    tags = models.ManyToManyField(Tag, related_name='recipes',
-                                  verbose_name='Теги')
+    tags = models.ManyToManyField(
+        Tag,
+        related_name='recipes',
+        verbose_name='Теги'
+    )
 
     class Meta:
         ordering = ['-id']
@@ -77,31 +77,41 @@ class IngredientRecipe(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='ingredient_list',
+        related_name='recipes',
         verbose_name='Рецепт',
     )
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
+        related_name='ingredients',
         verbose_name='Ингредиент',
     )
     amount = models.PositiveSmallIntegerField(
         verbose_name='Количество',
-        validators=[RegexValidator(r'^[0-9]+$',
-                                   'Значение должно быть целым числом'
-                                   )],
+        validators=[
+            RegexValidator(r'^[0-9]+$', 'Значение должно быть целым числом'),
+            MinValueValidator(1, 'Минимальное количество не менее 1')
+        ]
     )
 
     class Meta:
         verbose_name = 'Ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецептах'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_recipe_ingredient'
+            )
+        ]
 
     def __str__(self):
-        return (f'{self.ingredient.name} '
-                f'({self.ingredient.measurement_unit}) - {self.amount}')
+        return (f'{self.recipe.name}: '
+                f'{self.ingredient.name} - '
+                f'{self.amount} '
+                f'{self.ingredient.measurement_unit}')
 
 
-class Favourite(models.Model):
+class Favorite(models.Model):
     """Модель Избранное."""
 
     user = models.ForeignKey(

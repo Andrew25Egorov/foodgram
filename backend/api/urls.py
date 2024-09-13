@@ -1,33 +1,22 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-
-from .views import UserViewSet
+from . import views
 
 app_name = 'api'
 
 router = DefaultRouter()
-#router_v1.register('categories', CategoryViewSet, 'category')
-#router_v1.register('genres', GenreViewSet, 'genre')
-#router_v1.register('titles', TitleViewSet, 'title')
-#router_v1.register(
-#    r'titles/(?P<title_id>\d+)/reviews', ReviewViewSet, basename='review'
-#)
-#router_v1.register(
-#    r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments',
-#    CommentViewSet,
-#    basename='comment',
-#)
-router.register(r'users', UserViewSet, basename='users')
+router.register(r'users', views.UserViewSet, basename='users')
+router.register(r'recipes', views.RecipeViewSet, basename='recipes')
+router.register(r'tags', views.TagViewSet, basename='tags')
+router.register(
+    r'ingredients',
+    views.IngredientViewSet,
+    basename='ingredients'
+)
 
-#auth_patterns = [
-#    path('token/', TokenView.as_view()),
-#    path('signup/', SignUpView.as_view()),
-#]
 
 urls = [
     path('', include(router.urls)),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
 ]
-
-#urlpatterns = [path('v1/', include(api_v1_urls))]

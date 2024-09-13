@@ -10,3 +10,6 @@ pytest-pythonpath==0.7.3
 PyYAML==6.0
 python-dotenv==1.0.1
 gunicorn==20.1.0
+drf-base64==2.0
+django-filter==23.1
+django-extra-fields==3.0.2

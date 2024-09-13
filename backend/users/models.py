@@ -6,18 +6,26 @@ from django.db.models import UniqueConstraint
 
 class User(AbstractUser):
 #    USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
-    username_validator = UnicodeUsernameValidator()
+#    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
     username = models.CharField(
         max_length=150,
         unique=True,
-        validators=[username_validator],
+        validators=[UnicodeUsernameValidator()],
     )
-    email = models.EmailField('email', max_length=254)
+    email = models.EmailField(
+        unique=True,
+        max_length=254,
+        verbose_name='Электронная почта',
+        help_text='Укажите электронную почту',
+    )
     first_name = models.CharField(verbose_name='Имя', max_length=150)
     last_name = models.CharField(verbose_name='Фамилия', max_length=150)
-#    password = models.CharField('password', max_length=150)
-    avatar = models.ImageField(blank=True, null=True)
+    avatar = models.ImageField(
+        upload_to='media/avatar',
+        null=True,
+        default='default_avatar.jpeg',
+        verbose_name='Аватарка',
+    )
 
     class Meta(AbstractUser.Meta):
         ordering = ['id']
