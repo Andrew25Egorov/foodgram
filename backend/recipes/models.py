@@ -45,7 +45,7 @@ class Recipe(models.Model):
         verbose_name='Автор',
     )
     text = models.TextField('Описание')
-    image = models.ImageField('Изображение', upload_to='media/recipes/')
+    image = models.ImageField('Изображение', upload_to='recipes/')
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время приготовления',
         validators=[MinValueValidator(1, message='Минимум 1 минута!')],
@@ -117,13 +117,13 @@ class Favorite(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='favorites',
+        related_name='favorite',
         verbose_name='Пользователь',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='favorites',
+        related_name='favorite',
         verbose_name='Рецепт',
     )
 

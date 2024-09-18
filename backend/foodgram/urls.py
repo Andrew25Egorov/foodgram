@@ -10,11 +10,7 @@ from api.urls import urls as api_urls
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(api_urls)),
-    path(
-        'api/redoc/',
-        TemplateView.as_view(template_name='redoc.html'),
-        name='redoc',
-    ),
+    path('s/', include('shortener.urls')),
 ]
 
 if settings.DEBUG:

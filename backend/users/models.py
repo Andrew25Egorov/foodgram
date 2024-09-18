@@ -5,8 +5,7 @@ from django.db.models import UniqueConstraint
 
 
 class User(AbstractUser):
-#    USERNAME_FIELD = 'username'
-#    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+
     username = models.CharField(
         max_length=150,
         unique=True,
@@ -21,9 +20,8 @@ class User(AbstractUser):
     first_name = models.CharField(verbose_name='Имя', max_length=150)
     last_name = models.CharField(verbose_name='Фамилия', max_length=150)
     avatar = models.ImageField(
-        upload_to='media/avatar',
+        upload_to='avatar/',
         null=True,
-        default='default_avatar.jpeg',
         verbose_name='Аватарка',
     )
 
