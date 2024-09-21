@@ -11,6 +11,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(api_urls)),
     path('s/', include('shortener.urls')),
+    path(
+        'redoc/',
+        TemplateView.as_view(template_name='redoc.html'),
+        name='redoc',
+    ),
 ]
 
 if settings.DEBUG:

@@ -43,7 +43,7 @@ class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     pagination_class = CustomPaginator
-    serializer_class = UserReadSerializer
+    #serializer_class = UserReadSerializer
 
     @action(
         detail=True,
@@ -75,20 +75,27 @@ class CustomUserViewSet(UserViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if self.request.method == 'DELETE':
-            get_object_or_404(Subscribe, user=user,
-                              author=author).delete()
+            subscribing = Subscribe.objects.filter(user=user, author=author)
+            if not subscribing.exists():
+                return Response(
+                    {'detail': 'Вы уже отписаны!'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            subscribing.delete()
             return Response({'detail': 'Успешная отписка'},
                             status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     @action(
         detail=False,
         methods=("get",),
-        permission_classes=[IsAuthenticated]
+        permission_classes=[IsAuthenticated],
+    #    pagination_class=CustomPaginator
     )
     def subscriptions(self, request):
         """Список авторов, на которых подписан пользователь."""
         user = self.request.user
-        queryset = User.objects.filter(subscribing__user=user)
+        queryset = user.subscriber.all()
         limit = self.paginate_queryset(queryset)
         serializer = SubscriptionsSerializer(limit, many=True,
                                              context={'request': request})
@@ -102,14 +109,14 @@ class CustomUserViewSet(UserViewSet):
         return Response(serializer.data,
                         status=status.HTTP_200_OK)
  """
-    @action(detail=False, methods=['post'],
+    """ @action(detail=False, methods=['post'],
             permission_classes=(IsAuthenticated,))
     def set_password(self, request):
         serializer = SetPasswordSerializer(request.user, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
         return Response({'detail': 'Пароль успешно изменен!'},
-                        status=status.HTTP_204_NO_CONTENT)
+                        status=status.HTTP_204_NO_CONTENT) """
 
     @action(detail=False, methods=['put'],
             url_path='me/avatar',
