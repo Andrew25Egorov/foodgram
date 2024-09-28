@@ -5,10 +5,11 @@ from django.db.models import UniqueConstraint
 
 
 class User(AbstractUser):
-
+    """Модель пользователя."""
     username = models.CharField(
         max_length=150,
         unique=True,
+        help_text='Укажите username',
         validators=[UnicodeUsernameValidator()],
     )
     email = models.EmailField(
@@ -17,8 +18,10 @@ class User(AbstractUser):
         verbose_name='Электронная почта',
         help_text='Укажите электронную почту',
     )
-    first_name = models.CharField(verbose_name='Имя', max_length=150)
-    last_name = models.CharField(verbose_name='Фамилия', max_length=150)
+    first_name = models.CharField(verbose_name='Имя', max_length=150,
+                                  help_text='Укажите имя')
+    last_name = models.CharField(verbose_name='Фамилия', max_length=150,
+                                 help_text='Укажите фамилию')
     avatar = models.ImageField(
         upload_to='avatar/',
         null=True,
@@ -26,6 +29,7 @@ class User(AbstractUser):
     )
 
     class Meta(AbstractUser.Meta):
+        """Класс Meta для модели User."""
         ordering = ['id']
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
@@ -35,6 +39,7 @@ class User(AbstractUser):
 
 
 class Subscribe(models.Model):
+    """Модель подписки на автора."""
     user = models.ForeignKey(
         User,
         related_name='subscriber',
@@ -49,6 +54,7 @@ class Subscribe(models.Model):
     )
 
     class Meta:
+        """Класс Meta для модели Subscribe."""
         ordering = ['-id']
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'

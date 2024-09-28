@@ -16,7 +16,6 @@ class UserAdmin(admin.ModelAdmin):
         'avatar',
     )
     list_filter = ('email', 'username')
-    list_editable = ('password', 'avatar',)
     empty_value_display = '-пусто-'
 
 

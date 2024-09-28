@@ -10,7 +10,7 @@ from djoser.views import UserViewSet
 
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
@@ -41,9 +41,14 @@ from shortener import shortener
 
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
-    permission_classes = (AllowAny,)
+#    permission_classes = (AllowAny,)
     pagination_class = CustomPaginator
-    #serializer_class = UserReadSerializer
+    serializer_class = UserReadSerializer
+
+    def get_permissions(self):
+        if self.action == 'me':
+            self.permission_classes = [IsAuthenticated]
+        return super().get_permissions()
 
     @action(
         detail=True,
@@ -55,7 +60,7 @@ class CustomUserViewSet(UserViewSet):
         author = get_object_or_404(User, pk=id)
         user = self.request.user
 
-        if self.request.method == 'POST':
+        if request.method == 'POST':
             if user == author:
                 return Response(
                     {'errors': 'Нельзя подписаться или отписаться от себя!'},
@@ -67,14 +72,14 @@ class CustomUserViewSet(UserViewSet):
                     {'errors': 'Подписка уже оформлена!'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
-            serializer = SubscriptionsSerializer(author, data=request.data,
-                                                 context={'request': request})
-            serializer.is_valid(raise_exception=True)
+#            serializer = SubscriptionsSerializer(author, data=request.data,
+#                                                 context={'request': request})
+#            serializer.is_valid(raise_exception=True)
             Subscribe.objects.create(user=user, author=author)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response({'detail': 'Подписка оформлена!'},
+                            status=status.HTTP_201_CREATED)
 
-        if self.request.method == 'DELETE':
+        if request.method == 'DELETE':
             subscribing = Subscribe.objects.filter(user=user, author=author)
             if not subscribing.exists():
                 return Response(
@@ -88,9 +93,9 @@ class CustomUserViewSet(UserViewSet):
 
     @action(
         detail=False,
-        methods=("get",),
+        methods=('get',),
         permission_classes=[IsAuthenticated],
-    #    pagination_class=CustomPaginator
+        pagination_class=CustomPaginator
     )
     def subscriptions(self, request):
         """Список авторов, на которых подписан пользователь."""
@@ -126,9 +131,9 @@ class CustomUserViewSet(UserViewSet):
         """Добавление-обновление аватара пользователя."""
         serializer = AvatarSerializer(request.user, data=request.data)
 
-        if not request.data.get('avatar'):
+        if 'avatar' not in request.data:
             return Response(
-                {'detail': 'Поле avatar обязательно.'},
+                {'errors': 'Поле avatar обязательное.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -240,8 +245,8 @@ class CustomUserViewSet(UserViewSet):
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (DjangoFilterBackend,)
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+#    filter_backends = (IngredientFilter,)
     filterset_class = IngredientFilter
     search_fields = ('^name', )
 
@@ -250,6 +255,7 @@ class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = None
 
 
 class RecipeViewSet(ModelViewSet):
@@ -262,13 +268,21 @@ class RecipeViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def get_short_link(self, user, pk):
-        return shortener.create(user, pk)
-
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeCreateSerializer
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def short_link(self, request, pk):
+        """Получение короткой ссылки на рецепт."""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        short_link = self.get_short_link(request.user, recipe.id)
+        return Response({'short_link': short_link}, status=status.HTTP_200_OK)
+
+    def get_short_link(self, user, pk):
+        """Создание короткой ссылки для рецепта."""
+        return shortener.create(user, pk)
 
     @action(
         detail=True,
@@ -277,10 +291,7 @@ class RecipeViewSet(ModelViewSet):
     )
     def favorite(self, request, pk):
         """Добавление и удаление рецептов из избранного."""
-        if request.method == 'POST':
-            return self.add_to(Favorite, request.user, pk)
-        else:
-            return self.delete_from(Favorite, request.user, pk)
+        return self._handle_favorite_or_cart(Favorite, request, pk)
 
     @action(
         detail=True,
@@ -288,10 +299,14 @@ class RecipeViewSet(ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
+        """Добавление и удаление рецептов из покупок."""
+        return self._handle_favorite_or_cart(ShoppingCart, request, pk)
+
+    def _handle_favorite_or_cart(self, model, request, pk):
+        """Обработка добавления и удаления из избранного или покупок."""
         if request.method == 'POST':
-            return self.add_to(ShoppingCart, request.user, pk)
-        else:
-            return self.delete_from(ShoppingCart, request.user, pk)
+            return self.add_to(model, request.user, pk)
+        return self.delete_from(model, request.user, pk)
 
     def add_to(self, model, user, pk):
         """Добавление рецепта."""
