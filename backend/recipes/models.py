@@ -13,7 +13,7 @@ class Ingredient(models.Model):
 
     class Meta:
         """Класс Meta для модели Ingredient."""
-        ordering = ['name']
+        ordering = ('name',)
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         constraints = [models.UniqueConstraint(
@@ -27,8 +27,7 @@ class Ingredient(models.Model):
 class Tag(models.Model):
     """Модель Тега."""
 
-    name = models.CharField('Название', unique=True, max_length=32)
-    # value = models.CharField('Название', unique=True, max_length=32)
+    name = models.CharField('Название тега', unique=True, max_length=32)
     slug = models.SlugField('Уникальный слаг', unique=True, max_length=32)
 
     class Meta:
@@ -71,7 +70,7 @@ class Recipe(models.Model):
 
     class Meta:
         """Класс Meta для модели Recipe."""
-        ordering = ['-id']
+        ordering = ('-id',)
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
 
@@ -171,7 +170,7 @@ class ShoppingCart(models.Model):
         verbose_name_plural = 'Списки покупок'
         constraints = [
             UniqueConstraint(fields=['user', 'recipe'],
-                             name='unique_user_shopping_cart')
+                             name='uniq_user_shopping_cart')
         ]
 
     def __str__(self):

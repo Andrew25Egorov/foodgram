@@ -6,6 +6,10 @@ from django.db.models import UniqueConstraint
 
 class User(AbstractUser):
     """Модель пользователя."""
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'username']
+
     username = models.CharField(
         max_length=150,
         unique=True,
@@ -28,7 +32,7 @@ class User(AbstractUser):
         verbose_name='Аватарка',
     )
 
-    class Meta(AbstractUser.Meta):
+    class Meta:
         """Класс Meta для модели User."""
         ordering = ['id']
         verbose_name = 'Пользователь'
