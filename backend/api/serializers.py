@@ -9,7 +9,7 @@ from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer, ReadOnlyField
 from rest_framework.validators import UniqueTogetherValidator
 # from django.db import transaction
-# from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404
 
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
@@ -263,7 +263,7 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
     """Ингредиент и количество для создания рецепта."""
 
 #    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
-    id = IntegerField(write_only=True)
+    id = IntegerField()
 
     class Meta:
         model = IngredientRecipe
@@ -329,28 +329,59 @@ class RecipeCreateSerializer(ModelSerializer):
         ingredients = validated_data.pop('ingredients', [])
         if tags:
             instance.tags.set(tags)
-        if ingredients:
-            instance.ingredients.clear()
-            self.create_ingredients_amounts(ingredients, instance)
+
+        current_ingredient_ids = set(instance.ingredients
+                                     .values_list('ingredient__id', flat=True))
+
+        new_ingredient_ids = {ingredient_data['id'] for ingredient_data
+                              in ingredients}
+
+        for ingr_id in current_ingredient_ids - new_ingredient_ids:
+            IngredientRecipe.objects.filter(ingredient_id=ingr_id,
+                                            recipe=instance).delete()
+
+        for ingredient_data in ingredients:
+            ingredient_instance = get_object_or_404(
+                Ingredient,
+                pk=ingredient_data['id']
+            )
+            ingr_recipe, created = IngredientRecipe.objects.get_or_create(
+                ingredient=ingredient_instance,
+                recipe=instance,
+                defaults={'amount': ingredient_data['amount']}
+            )
+            if not created:
+                ingr_recipe.amount = ingredient_data['amount']
+                ingr_recipe.save()
         return super().update(instance, validated_data)
 
     @staticmethod
     def create_ingredients_amounts(ingredients, recipe):
         """Добавление ингредиентов с количеством."""
-        for ingredient in ingredients:
-            IngredientRecipe.objects.create(
+        ingredient_objects = []
+        for ingredient_data in ingredients:
+            ingredient_instance = get_object_or_404(Ingredient,
+                                                    pk=ingredient_data['id'])
+            ingredient_objects.append(IngredientRecipe(
+                ingredient=ingredient_instance,
                 recipe=recipe,
-                ingredient=ingredient.get('id'),
-                amount=ingredient.get('amount'),
-            )
+                amount=ingredient_data['amount'],
+            ))
+        IngredientRecipe.objects.bulk_create(ingredient_objects)
+
+        # for ingredient in ingredients:
+        #     IngredientRecipe.objects.create(
+        #         recipe=recipe,
+        #         ingredient=ingredient.get('id'),
+        #         amount=ingredient.get('amount'),
+        #     )
         # IngredientRecipe.objects.bulk_create(
         #     IngredientRecipe(
-        #         ingredient=Ingredient.objects.get(id=ingredient['id']),
+        #         ingredient=get_object_or_404(Ingredient, pk=ingredient['id']),
         #         recipe=recipe,
         #         amount=ingredient['amount'],
         #     ) for ingredient in ingredients
         # )
-        # return recipe
 
     def to_representation(self, recipe):
         request = self.context.get('request')

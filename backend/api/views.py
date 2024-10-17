@@ -35,14 +35,14 @@ from shortener import shortener
 class CustomUserViewSet(UserViewSet):
     """Вьюсет пользователя."""
     queryset = User.objects.all()
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticatedOrReadOnly,)
     pagination_class = CustomPaginator
     serializer_class = UserReadSerializer
 
-    # def get_permissions(self):
-    #     if self.action == 'me':
-    #         self.permission_classes = [IsAuthenticated]
-    #     return super().get_permissions()
+    def get_permissions(self):
+        if self.action == 'me':
+            self.permission_classes = [IsAuthenticated]
+        return super().get_permissions()
 
     @action(
         detail=True,
