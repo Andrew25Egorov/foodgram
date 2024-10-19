@@ -26,13 +26,13 @@ class IngredientRecipeInline(admin.StackedInline):
     model = Recipe.ingredients.through
     extra = 1
 
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     inlines = (IngredientRecipeInline,)
     list_display = ('name', 'author', 'image', 'cooking_time', 'text',
                     'in_favorites',)
     list_filter = ('author', 'name', 'tags',)
-#    list_editable = ('name', 'author', 'image', 'cooking_time', 'text', 'tags')
     readonly_fields = ('in_favorites',)
     empty_value_display = '-пусто-'
 

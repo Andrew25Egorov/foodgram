@@ -79,7 +79,7 @@ class Recipe(models.Model):
 
 
 class IngredientRecipe(models.Model):
-    """Модель для связи Ингредиента и Рецепта."""
+    """Модель связи ингредиента (с количеством) и рецепта."""
 
     recipe = models.ForeignKey(
         Recipe,
@@ -94,6 +94,7 @@ class IngredientRecipe(models.Model):
         verbose_name='Ингредиент',
     )
     amount = models.PositiveSmallIntegerField(
+        default=1,
         verbose_name='Количество',
         validators=[
             RegexValidator(r'^[0-9]+$', 'Значение должно быть целым числом'),

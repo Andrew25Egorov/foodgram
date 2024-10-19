@@ -19,7 +19,9 @@ from users.models import Subscribe, User
 class AvatarSerializer(UserSerializer):
     """Аватар."""
 
-    avatar = Base64ImageField(required=True)
+    avatar = Base64ImageField(required=True,
+                              max_length=None,
+                              allow_empty_file=False)
 
     class Meta:
         model = User
@@ -71,41 +73,10 @@ class UserCreateSerializers(UserCreateSerializer):
         return attrs
 
 
-""" class SetPasswordSerializer(serializers.Serializer):
-    Изменение пароля пользователя.
-
-    current_password = serializers.CharField()
-    new_password = serializers.CharField()
-
-    def validate(self, obj):
-        try:
-            validate_password(obj['new_password'])
-        except django_exceptions.ValidationError as e:
-            raise serializers.ValidationError(
-                {'new_password': list(e.messages)}
-            )
-        return super().validate(obj)
-
-    def update(self, instance, validated_data):
-        if not instance.check_password(validated_data['current_password']):
-            raise serializers.ValidationError(
-                {'current_password': 'Неправильный пароль.'}
-            )
-        if (validated_data['current_password']
-           == validated_data['new_password']):
-            raise serializers.ValidationError(
-                {'new_password': 'Новый пароль должен отличаться от текущего.'}
-            )
-        instance.set_password(validated_data['new_password'])
-        instance.save()
-        return validated_data
- """
-
-
 class RecipeSerializer(ModelSerializer):
     """Список рецептов без ингредиентов."""
 
-    image = Base64ImageField(read_only=True)
+    image = Base64ImageField(max_length=None, allow_empty_file=False)
 
     class Meta:
         model = Recipe
@@ -224,7 +195,7 @@ class RecipeReadSerializer(ModelSerializer):
     ingredients = SerializerMethodField()
     is_favorited = SerializerMethodField(read_only=True)
     is_in_shopping_cart = SerializerMethodField(read_only=True)
-    image = Base64ImageField()
+    image = Base64ImageField(max_length=None, allow_empty_file=False)
 
     class Meta:
         model = Recipe
@@ -277,7 +248,7 @@ class RecipeCreateSerializer(ModelSerializer):
     id = ReadOnlyField()
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = RecipeIngredientCreateSerializer(many=True)
-    image = Base64ImageField(max_length=None)
+    image = Base64ImageField(max_length=None, allow_empty_file=False)
     cooking_time = IntegerField()
 
     class Meta:
@@ -286,6 +257,14 @@ class RecipeCreateSerializer(ModelSerializer):
                   'tags', 'author',
                   'name', 'image',
                   'text', 'cooking_time')
+        extra_kwargs = {
+            'ingredients': {'required': True, 'allow_blank': False},
+            'tags': {'required': True, 'allow_blank': False},
+            'name': {'required': True, 'allow_blank': False},
+            'text': {'required': True, 'allow_blank': False},
+            'image': {'required': True, 'allow_blank': False},
+            'cooking_time': {'required': True},
+        }
 
     def validate_ingredients(self, value):
         if not value:

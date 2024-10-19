@@ -39,10 +39,10 @@ class CustomUserViewSet(UserViewSet):
     pagination_class = CustomPaginator
     serializer_class = UserReadSerializer
 
-    def get_permissions(self):
-        if self.action == 'me':
-            self.permission_classes = [IsAuthenticated]
-        return super().get_permissions()
+    # def get_permissions(self):
+    #     if self.action == 'me':
+    #         self.permission_classes = [IsAuthenticated]
+    #     return super().get_permissions()
 
     @action(
         detail=True,
@@ -97,7 +97,7 @@ class CustomUserViewSet(UserViewSet):
                                              context={'request': request})
         return self.get_paginated_response(serializer.data)
 
-    @action(detail=True, methods=['put'],
+    @action(detail=True, methods=['PUT'],
             url_path='me/avatar',
             permission_classes=[IsAuthenticated],
             )
@@ -147,7 +147,7 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (IsAdminOrReadOnly,)
+#    permission_classes = (IsAdminOrReadOnly,)
     pagination_class = None
 
 
@@ -169,7 +169,7 @@ class RecipeViewSet(ModelViewSet):
         return RecipeCreateSerializer
 
     @action(detail=True, methods=['get'],
-            url_path='/get-link', permission_classes=[IsAuthenticated])
+            url_path='get-link', permission_classes=[AllowAny])
     def short_link(self, request, pk):
         """ Получение короткой ссылки на рецепт. """
         recipe = get_object_or_404(Recipe, pk=pk)
@@ -221,7 +221,7 @@ class RecipeViewSet(ModelViewSet):
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({'errors': 'Рецепт уже удален!'},
-                        status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_404_NOT_FOUND)
 
     @action(
         detail=False,
