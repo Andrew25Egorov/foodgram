@@ -44,6 +44,14 @@ class CustomUserViewSet(UserViewSet):
     #         self.permission_classes = [IsAuthenticated]
     #     return super().get_permissions()
 
+    # @action(detail=False, methods=['get'],
+    #         pagination_class=None,
+    #         permission_classes=(IsAuthenticated,))
+    # def me(self, request):
+    #     serializer = UserReadSerializer(request.user)
+    #     return Response(serializer.data,
+    #                     status=status.HTTP_200_OK)
+
     @action(
         detail=True,
         methods=('post', 'delete'),
@@ -97,7 +105,7 @@ class CustomUserViewSet(UserViewSet):
                                              context={'request': request})
         return self.get_paginated_response(serializer.data)
 
-    @action(detail=True, methods=['PUT'],
+    @action(detail=False, methods=['PUT'],
             url_path='me/avatar',
             permission_classes=[IsAuthenticated],
             )

@@ -43,7 +43,7 @@ class UserReadSerializer(UserSerializer):
         model = User
         fields = ('email', 'id', 'username',
                   'first_name', 'last_name',
-                  'avatar', 'is_subscribed')
+                  'is_subscribed', 'avatar')
 
     def get_is_subscribed(self, author):
         """Проверка наличия подписки."""
@@ -63,14 +63,14 @@ class UserCreateSerializers(UserCreateSerializer):
         fields = ('id', 'email', 'username',
                   'first_name', 'last_name', 'password')
 
-    def validate(self, attrs):
-        invalid_usernames = ['admin', 'me', 'set_password', 'first_name',
-                             'last_name', 'subscriptions', 'subscribe']
-        if attrs.get('username') in invalid_usernames:
-            raise ValidationError(
-                {'username': 'Вы не можете использовать этот username.'}
-            )
-        return attrs
+    # def validate(self, attrs):
+    #     invalid_usernames = ['admin', 'me', 'set_password', 'first_name',
+    #                          'last_name', 'subscriptions', 'subscribe']
+    #     if attrs.get('username') in invalid_usernames:
+    #         raise ValidationError(
+    #             {'username': 'Вы не можете использовать этот username.'}
+    #         )
+    #     return attrs
 
 
 class RecipeSerializer(ModelSerializer):
@@ -234,7 +234,7 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
     """Ингредиент и количество для создания рецепта."""
 
 #    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
-    id = IntegerField()
+    id = IntegerField(write_only=True)
 
     class Meta:
         model = IngredientRecipe
@@ -257,14 +257,36 @@ class RecipeCreateSerializer(ModelSerializer):
                   'tags', 'author',
                   'name', 'image',
                   'text', 'cooking_time')
-        extra_kwargs = {
-            'ingredients': {'required': True, 'allow_blank': False},
-            'tags': {'required': True, 'allow_blank': False},
-            'name': {'required': True, 'allow_blank': False},
-            'text': {'required': True, 'allow_blank': False},
-            'image': {'required': True, 'allow_blank': False},
-            'cooking_time': {'required': True},
-        }
+        # extra_kwargs = {
+        #     'ingredients': {'required': True},
+        #     'tags': {'required': True},
+        #     'name': {'required': True},
+        #     'text': {'required': True},
+        #     'image': {'required': True},
+        #     'cooking_time': {'required': True},
+        # }
+
+    def validate(self, obj):
+        for field in ['name', 'text', 'image', 'cooking_time']:
+            if not obj.get(field):
+                raise ValidationError(
+                    f'{field} - Обязательное поле.'
+                )
+        if not obj.get('tags'):
+            raise ValidationError(
+                'Нужно указать минимум 1 тег.'
+            )
+        if not obj.get('ingredients'):
+            raise ValidationError(
+                'Нужно указать минимум 1 ингредиент.'
+            )
+        inrgedient_id_list = [item['id'] for item in obj.get('ingredients')]
+        unique_ingredient_id_list = set(inrgedient_id_list)
+        if len(inrgedient_id_list) != len(unique_ingredient_id_list):
+            raise ValidationError(
+                'Ингредиенты должны быть уникальны.'
+            )
+        return obj
 
     def validate_ingredients(self, value):
         if not value:
