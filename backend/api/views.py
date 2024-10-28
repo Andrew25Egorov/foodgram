@@ -1,35 +1,31 @@
+"""Модуль вьюсетов."""
 from datetime import datetime
 
-from api.pagination import CustomPaginator
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-
-from rest_framework import filters, mixins, status, viewsets
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly,
                                         SAFE_METHODS)
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-
-from users.models import Subscribe, User
-from recipes.models import (Favorite, Ingredient, Recipe, IngredientRecipe,
-                            ShoppingCart, Tag)
-from .filters import IngredientFilter, RecipeFilter
-from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
-from .serializers import (AvatarSerializer,
-                          IngredientSerializer, RecipeCreateSerializer,
-                          RecipeReadSerializer, RecipeSerializer,
-#                          SetPasswordSerializer,
-                          SubscribeSerializer,
-                          SubscriptionsSerializer,
-                          TagSerializer,
-                          UserReadSerializer)
-
 from shortlink.models import ShortLink
+
+from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
+                            ShoppingCart, Tag)
+from users.models import Subscribe, User
+from .filters import IngredientFilter, RecipeFilter
+from .pagination import CustomPaginator
+from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
+from .serializers import (AvatarSerializer, IngredientSerializer,
+                          RecipeCreateSerializer, RecipeReadSerializer,
+                          RecipeSerializer, SubscribeSerializer,
+                          SubscriptionsSerializer, TagSerializer,
+                          UserReadSerializer)
 
 
 class CustomUserViewSet(UserViewSet):
@@ -40,17 +36,10 @@ class CustomUserViewSet(UserViewSet):
     serializer_class = UserReadSerializer
 
     def get_permissions(self):
+        """Получение разрешений."""
         if self.action == 'me':
-            self.permission_classes = [IsAuthenticated]
+            self.permission_classes = (IsAuthenticated,)
         return super().get_permissions()
-
-    # @action(detail=False, methods=['get'],
-    #         pagination_class=None,
-    #         permission_classes=(IsAuthenticated,))
-    # def me(self, request):
-    #     serializer = UserReadSerializer(request.user)
-    #     return Response(serializer.data,
-    #                     status=status.HTTP_200_OK)
 
     @action(
         detail=True,
@@ -105,10 +94,12 @@ class CustomUserViewSet(UserViewSet):
                                              context={'request': request})
         return self.get_paginated_response(serializer.data)
 
-    @action(detail=False, methods=['PUT'],
-            url_path='me/avatar',
-            permission_classes=[IsAuthenticated],
-            )
+    @action(
+        detail=False,
+        methods=['PUT'],
+        url_path='me/avatar',
+        permission_classes=[IsAuthenticated],
+    )
     def avatar(self, request, *args, **kwargs):
         """Добавление и обновление аватара пользователя."""
         serializer = AvatarSerializer(request.user, data=request.data)
@@ -133,69 +124,69 @@ class CustomUserViewSet(UserViewSet):
             user.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(
-            {'detail': 'Аватар отсутствует.'},
+            {'errors': 'Аватар отсутствует.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-# -----------------------------------------------------------------------------
-#                            Приложение recipes
-# -----------------------------------------------------------------------------
-
 
 class IngredientViewSet(ReadOnlyModelViewSet):
+    """Вьюсет ингредиентов."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
-#    filter_backends = (IngredientFilter,)
     filterset_class = IngredientFilter
     search_fields = ('^name', )
     pagination_class = None
 
 
 class TagViewSet(ReadOnlyModelViewSet):
+    """Вьюсет тегов."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-#    permission_classes = (IsAdminOrReadOnly,)
     pagination_class = None
 
 
 class RecipeViewSet(ModelViewSet):
+    """Вьюсет рецептов."""
     queryset = Recipe.objects.all()
     permission_classes = (IsAuthorOrReadOnly,)
     pagination_class = CustomPaginator
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-#    serializer_class = RecipeReadSerializer
 
     def get_serializer_class(self):
-        """ Выбор сериализатора. """
+        """Выбор сериализатора."""
         if self.request.method in SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeCreateSerializer
 
     def perform_create(self, serializer):
-        """ Сохранение нового рецепта с автором. """
+        """Сохранение нового рецепта с автором."""
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=['get'],
-            url_path='get-link', permission_classes=[AllowAny])
-    def short_link(self, request, pk):
-        """ Получение короткой ссылки на рецепт. """
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='get-link',
+        permission_classes=(AllowAny,)
+    )
+    def short_link(self, pk):
+        """Получение короткой ссылки на рецепт."""
         recipe = get_object_or_404(Recipe, pk=pk)
         short_link = self.get_short_link(recipe)
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
     def get_short_link(self, recipe):
-        """ Создание короткой ссылки для рецепта. """
+        """Создание короткой ссылки для рецепта."""
         short_link = ShortLink.objects.create(
-            target=f'/recipes/{recipe.id}/'  # Adjust the target URL as needed
+            full_url=f'/recipes/{recipe.id}/'
         )
         return short_link.short_url
 
     @action(
         detail=True,
         methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=(IsAuthenticated,)
     )
     def favorite(self, request, pk):
         """Добавление и удаление рецептов из избранного."""
@@ -204,7 +195,7 @@ class RecipeViewSet(ModelViewSet):
     @action(
         detail=True,
         methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk):
         """Добавление и удаление рецептов из покупок."""
@@ -239,15 +230,13 @@ class RecipeViewSet(ModelViewSet):
     @action(
         detail=False,
         methods=['get'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
         """Скачивание списка покупок."""
         user = request.user
         if not ShoppingCart.objects.filter(user=user).exists():
             return Response(status=status.HTTP_204_NO_CONTENT)
-        # if not user.shopping_user.exists():
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
 
         ingredients = IngredientRecipe.objects.filter(
             recipe__shopping_recipe__user=user
@@ -255,7 +244,6 @@ class RecipeViewSet(ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(amount=Sum('amount'))
-
         today = datetime.today()
         shopping_list = (
             f'Список покупок для: {user.get_full_name()}\n\n'

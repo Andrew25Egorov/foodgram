@@ -1,5 +1,4 @@
-# from django.contrib.auth.password_validation import validate_password
-# from django.core import exceptions as django_exceptions
+"""Модуль сериализаторов."""
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import status
@@ -9,11 +8,15 @@ from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer, ReadOnlyField
 from rest_framework.validators import UniqueTogetherValidator
 # from django.db import transaction
-from django.shortcuts import get_object_or_404
+# from django.shortcuts import get_object_or_404
 
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
 from users.models import Subscribe, User
+
+# -----------------------------------------------------------------------------
+#                            Приложение users
+# -----------------------------------------------------------------------------
 
 
 class AvatarSerializer(UserSerializer):
@@ -63,15 +66,6 @@ class UserCreateSerializers(UserCreateSerializer):
         fields = ('id', 'email', 'username',
                   'first_name', 'last_name', 'password')
 
-    # def validate(self, attrs):
-    #     invalid_usernames = ['admin', 'me', 'set_password', 'first_name',
-    #                          'last_name', 'subscriptions', 'subscribe']
-    #     if attrs.get('username') in invalid_usernames:
-    #         raise ValidationError(
-    #             {'username': 'Вы не можете использовать этот username.'}
-    #         )
-    #     return attrs
-
 
 class RecipeSerializer(ModelSerializer):
     """Список рецептов без ингредиентов."""
@@ -99,7 +93,7 @@ class SubscriptionsSerializer(UserReadSerializer):
                             'last_name', 'username')
 
     def get_recipes_count(self, author):
-        """Количество рецептов автора."""
+        """Количество подписок на рецепт автора."""
         return author.recipes.count()
 
     def get_recipes(self, author):
@@ -154,7 +148,7 @@ class SubscribeSerializer(ModelSerializer):
 
 
 class IngredientSerializer(ModelSerializer):
-    """Список ингредиентов."""
+    """Список ингредиентов с единицами измерения."""
 
     class Meta:
         model = Ingredient
@@ -188,7 +182,7 @@ class RecipeIngredientSerializer(ModelSerializer):
 
 
 class RecipeReadSerializer(ModelSerializer):
-    """Сериализатор для чтения информации о рецепте."""
+    """Сериализатор для вывода информации о рецепте."""
 
     author = UserReadSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
@@ -235,7 +229,6 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
 
     id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all(),
                                 write_only=True)
-#    id = IntegerField(write_only=True)
 
     class Meta:
         model = IngredientRecipe
@@ -243,7 +236,7 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
 
 
 class RecipeCreateSerializer(ModelSerializer):
-    """Создание, изменение и удаление рецепта."""
+    """Создание, изменение или удаление рецепта."""
 
     author = UserReadSerializer(read_only=True)
     id = ReadOnlyField()
@@ -268,7 +261,6 @@ class RecipeCreateSerializer(ModelSerializer):
         return obj
 
     def validate_ingredients(self, value):
-#        print("Incoming ingredients:", value)
         if not value:
             raise ValidationError('Нужен хотя бы один ингредиент!')
 
@@ -277,12 +269,10 @@ class RecipeCreateSerializer(ModelSerializer):
 
         for item in value:
             ingredient_id = item['id']
-#            print("Incoming id:", ingredient_id)
             if isinstance(ingredient_id, Ingredient):
                 ingredient_id = ingredient_id.id
             elif not isinstance(ingredient_id, int):
                 raise ValidationError('ID ингредиента должен быть числом!')
-#            print("Incoming id.id:", ingredient_id)
             if ingredient_id in ingredients:
                 raise ValidationError('Ингредиенты не могут повторяться!')
             if int(item['amount']) <= 0:
@@ -392,28 +382,12 @@ class RecipeCreateSerializer(ModelSerializer):
         """Добавление ингредиентов с количеством."""
         ingredient_objects = []
         for ingredient_data in ingredients:
-            # ingredient_instance = get_object_or_404(Ingredient,
-            #                                         pk=ingredient_data['id'])
             ingredient_objects.append(IngredientRecipe(
                 ingredient=ingredient_data.get('id'),
                 recipe=recipe,
                 amount=ingredient_data['amount'],
             ))
         IngredientRecipe.objects.bulk_create(ingredient_objects)
-
-        # for ingredient in ingredients:
-        #     IngredientRecipe.objects.create(
-        #         recipe=recipe,
-        #         ingredient=ingredient.get('id'),
-        #         amount=ingredient.get('amount'),
-        #     )
-        # IngredientRecipe.objects.bulk_create(
-        #     IngredientRecipe(
-        #         ingredient=get_object_or_404(Ingredient, pk=ingredient['id']),
-        #         recipe=recipe,
-        #         amount=ingredient['amount'],
-        #     ) for ingredient in ingredients
-        # )
 
     def to_representation(self, recipe):
         request = self.context.get('request')
