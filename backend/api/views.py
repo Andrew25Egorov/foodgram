@@ -29,7 +29,7 @@ from .serializers import (AvatarSerializer,
                           TagSerializer,
                           UserReadSerializer)
 
-from shortener import shortener
+from shortlink.models import ShortLink
 
 
 class CustomUserViewSet(UserViewSet):
@@ -174,6 +174,7 @@ class RecipeViewSet(ModelViewSet):
         return RecipeCreateSerializer
 
     def perform_create(self, serializer):
+        """ Сохранение нового рецепта с автором. """
         serializer.save(author=self.request.user)
 
     @action(detail=True, methods=['get'],
@@ -181,12 +182,15 @@ class RecipeViewSet(ModelViewSet):
     def short_link(self, request, pk):
         """ Получение короткой ссылки на рецепт. """
         recipe = get_object_or_404(Recipe, pk=pk)
-        short_link = self.get_short_link(request.user, recipe.id)
+        short_link = self.get_short_link(recipe)
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
-    def get_short_link(self, user, pk):
+    def get_short_link(self, recipe):
         """ Создание короткой ссылки для рецепта. """
-        return shortener.create(user, pk)
+        short_link = ShortLink.objects.create(
+            target=f'/recipes/{recipe.id}/'  # Adjust the target URL as needed
+        )
+        return short_link.short_url
 
     @action(
         detail=True,
@@ -224,12 +228,13 @@ class RecipeViewSet(ModelViewSet):
 
     def delete_from(self, model, user, pk):
         """Удаление рецепта."""
-        obj = model.objects.filter(user=user, recipe__id=pk)
+        recipe = get_object_or_404(Recipe, id=pk)
+        obj = model.objects.filter(user=user, recipe=recipe)
         if obj.exists():
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'errors': 'Рецепт уже удален!'},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response({'errors': 'Этот рецепт не был добавлен!'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=False,

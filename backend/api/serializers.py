@@ -233,7 +233,8 @@ class RecipeReadSerializer(ModelSerializer):
 class RecipeIngredientCreateSerializer(ModelSerializer):
     """Ингредиент и количество для создания рецепта."""
 
-    id = PrimaryKeyRelatedField(many=True, read_only=True)
+    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all(),
+                                write_only=True)
 #    id = IntegerField(write_only=True)
 
     class Meta:
@@ -257,20 +258,51 @@ class RecipeCreateSerializer(ModelSerializer):
                   'tags', 'author',
                   'name', 'image',
                   'text', 'cooking_time')
-        # extra_kwargs = {
-        #     'ingredients': {'required': True},
-        #     'tags': {'required': True},
-        #     'name': {'required': True},
-        #     'text': {'required': True},
-        #     'image': {'required': True},
-        #     'cooking_time': {'required': True},
-        # }
 
     def validate(self, obj):
-        for field in ['ingredients', 'tags', 'name', 'text',
-                      'image', 'cooking_time']:
+        required_fields = ['ingredients', 'tags', 'name', 'text',
+                           'image', 'cooking_time']
+        for field in required_fields:
             if not obj.get(field):
                 raise ValidationError(f'{field} - Обязательное поле!')
+        return obj
+
+    def validate_ingredients(self, value):
+#        print("Incoming ingredients:", value)
+        if not value:
+            raise ValidationError('Нужен хотя бы один ингредиент!')
+
+        ingredients = set()
+        ingredient_ids = []
+
+        for item in value:
+            ingredient_id = item['id']
+#            print("Incoming id:", ingredient_id)
+            if isinstance(ingredient_id, Ingredient):
+                ingredient_id = ingredient_id.id
+            elif not isinstance(ingredient_id, int):
+                raise ValidationError('ID ингредиента должен быть числом!')
+#            print("Incoming id.id:", ingredient_id)
+            if ingredient_id in ingredients:
+                raise ValidationError('Ингредиенты не могут повторяться!')
+            if int(item['amount']) <= 0:
+                raise ValidationError(
+                    'Количество ингредиента должно быть больше 0!'
+                )
+            ingredients.add(ingredient_id)
+            ingredient_ids.append(ingredient_id)
+        return value
+    # Проверка на существование ингредиентов
+        # non_exist_ingredients = []
+        # for ingredient_id in ingredient_ids:
+        #     if not IngredientRecipe.objects.filter(id=ingredient_id).exists():
+        #         non_exist_ingredients.append(ingredient_id)
+
+        # if non_exist_ingredients:
+        #     raise ValidationError(
+        #         f'Ингредиент с ID {", ".join(map(str, non_exist_ingredients))}'
+        #         f' не существует!'
+        #     )
 
         # if not obj.get('tags'):
         #     raise ValidationError('Нужно выбрать хотя бы один тег!')
@@ -285,7 +317,7 @@ class RecipeCreateSerializer(ModelSerializer):
         #     raise ValidationError(
         #         'Ингредиенты не должны повторяться!'
         #     )
-        return obj
+        # return obj
 
     def validate_tags(self, value):
         if not value:
@@ -294,21 +326,19 @@ class RecipeCreateSerializer(ModelSerializer):
             raise ValidationError('Теги должны быть уникальными!')
         return value
 
-    def validate_ingredients(self, value):
-        if not value:
-            raise ValidationError('Нужен хотя бы один ингредиент!')
-        ingredients = set()
-        for item in value:
-#            if item['id'] not in value:
-#                raise ValidationError('Ингредиент не существует!')
-            if item['id'] in ingredients:
-                raise ValidationError('Ингредиенты не могут повторяться!')
-            if int(item['amount']) <= 0:
-                raise ValidationError(
-                    'Количество ингредиента должно быть больше 0!'
-                )
-            ingredients.add(item['id'])
-        return value
+    # def validate_ingredients(self, value):
+    #     if not value:
+    #         raise ValidationError('Нужен хотя бы один ингредиент!')
+    #     ingredients = set()
+    #     for item in value:
+    #         if item['id'] in ingredients:
+    #             raise ValidationError('Ингредиенты не могут повторяться!')
+    #         if int(item['amount']) <= 0:
+    #             raise ValidationError(
+    #                 'Количество ингредиента должно быть больше 0!'
+    #             )
+    #         ingredients.add(item['id'])
+    #     return value
 
     def validate_cooking_time(self, value):
         if value < 1:
@@ -343,12 +373,12 @@ class RecipeCreateSerializer(ModelSerializer):
                                             recipe=instance).delete()
 
         for ingredient_data in ingredients:
-            ingredient_instance = get_object_or_404(
-                Ingredient,
-                pk=ingredient_data['id']
-            )
+            # ingredient_instance = get_object_or_404(
+            #     Ingredient,
+            #     pk=ingredient_data['id']
+            # )
             ingr_recipe, created = IngredientRecipe.objects.get_or_create(
-                ingredient=ingredient_instance,
+                ingredient=ingredient_data.get('id'),
                 recipe=instance,
                 defaults={'amount': ingredient_data['amount']}
             )
@@ -362,10 +392,10 @@ class RecipeCreateSerializer(ModelSerializer):
         """Добавление ингредиентов с количеством."""
         ingredient_objects = []
         for ingredient_data in ingredients:
-            ingredient_instance = get_object_or_404(Ingredient,
-                                                    pk=ingredient_data['id'])
+            # ingredient_instance = get_object_or_404(Ingredient,
+            #                                         pk=ingredient_data['id'])
             ingredient_objects.append(IngredientRecipe(
-                ingredient=ingredient_instance,
+                ingredient=ingredient_data.get('id'),
                 recipe=recipe,
                 amount=ingredient_data['amount'],
             ))
