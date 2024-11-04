@@ -164,15 +164,19 @@ class RecipeViewSet(ModelViewSet):
         """Сохранение нового рецепта с автором."""
         serializer.save(author=self.request.user)
 
+    def perform_update(self, serializer):
+        """Изменение рецепта."""
+        serializer.save(partial=True)
+
     @action(
         detail=True,
         methods=['get'],
         url_path='get-link',
         permission_classes=(AllowAny,)
     )
-    def short_link(self, pk):
+    def short_link(self, request, pk=None):
         """Получение короткой ссылки на рецепт."""
-        recipe = get_object_or_404(Recipe, pk=pk)
+        recipe = self.get_object()
         short_link = self.get_short_link(recipe)
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
@@ -256,7 +260,6 @@ class RecipeViewSet(ModelViewSet):
             for ingredient in ingredients
         ])
         shopping_list += f'\n\nсформировано сервисом "Foodgram" ({today:%Y})'
-
         filename = f'{user.username}_shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename={filename}'

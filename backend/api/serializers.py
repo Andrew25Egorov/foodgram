@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.fields import IntegerField, SerializerMethodField
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer, ReadOnlyField
-from rest_framework.validators import UniqueTogetherValidator
+# from rest_framework.validators import UniqueTogetherValidator
 # from django.db import transaction
 # from django.shortcuts import get_object_or_404
 
@@ -31,6 +31,7 @@ class AvatarSerializer(UserSerializer):
         fields = ('avatar',)
 
     def validate(self, data):
+        """Валидация поля аватара."""
         if 'avatar' not in data:
             raise ValidationError(
                 {'errors': 'Поле avatar обязательно.'})
@@ -124,6 +125,7 @@ class SubscribeSerializer(ModelSerializer):
         )
 
     def validate(self, attrs):
+        """Валидация подписки."""
         user = attrs['user']
         author = attrs['author']
         if user == author:
@@ -166,7 +168,7 @@ class TagSerializer(ModelSerializer):
 class RecipeIngredientSerializer(ModelSerializer):
     """Список ингредиентов с количеством для рецепта."""
 
-    id = ReadOnlyField()
+    id = ReadOnlyField(source='ingredient.id')
     name = ReadOnlyField(source='ingredient.name')
     measurement_unit = ReadOnlyField(
         source='ingredient.measurement_unit')
@@ -175,10 +177,6 @@ class RecipeIngredientSerializer(ModelSerializer):
         model = IngredientRecipe
         fields = ('id', 'name',
                   'measurement_unit', 'amount')
-        validators = [UniqueTogetherValidator(
-            queryset=IngredientRecipe.objects.all(),
-            fields=['ingredient', 'recipe'])
-        ]
 
 
 class RecipeReadSerializer(ModelSerializer):
@@ -189,7 +187,7 @@ class RecipeReadSerializer(ModelSerializer):
     ingredients = SerializerMethodField()
     is_favorited = SerializerMethodField(read_only=True)
     is_in_shopping_cart = SerializerMethodField(read_only=True)
-    image = Base64ImageField(max_length=None, allow_empty_file=False)
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -198,7 +196,7 @@ class RecipeReadSerializer(ModelSerializer):
                   'is_favorited', 'is_in_shopping_cart',
                   'name', 'image',
                   'text', 'cooking_time')
-        read_only_fields = ('author', 'tags',)
+#        read_only_fields = ('author', 'tags',)
 
     def get_ingredients(self, obj):
         """Получение списка ингредиентов."""
@@ -242,7 +240,7 @@ class RecipeCreateSerializer(ModelSerializer):
     id = ReadOnlyField()
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = RecipeIngredientCreateSerializer(many=True)
-    image = Base64ImageField(max_length=None, allow_empty_file=False)
+    image = Base64ImageField()
     cooking_time = IntegerField()
 
     class Meta:
@@ -253,26 +251,30 @@ class RecipeCreateSerializer(ModelSerializer):
                   'text', 'cooking_time')
 
     def validate(self, obj):
-        required_fields = ['ingredients', 'tags', 'name', 'text',
-                           'image', 'cooking_time']
+        """Валидация заполнения полей."""
+        required_fields = ['ingredients', 'tags', 'name',
+                           'text', 'cooking_time']
+
+        if 'id' not in self.initial_data:
+            required_fields.append('image')
+
         for field in required_fields:
             if not obj.get(field):
-                raise ValidationError(f'{field} - Обязательное поле!')
+                raise ValidationError(f'{field} - Заполните это поле!')
         return obj
 
     def validate_ingredients(self, value):
+        """Валидация по ингредиенту."""
         if not value:
             raise ValidationError('Нужен хотя бы один ингредиент!')
 
         ingredients = set()
-        ingredient_ids = []
-
         for item in value:
             ingredient_id = item['id']
-            if isinstance(ingredient_id, Ingredient):
-                ingredient_id = ingredient_id.id
-            elif not isinstance(ingredient_id, int):
-                raise ValidationError('ID ингредиента должен быть числом!')
+            # if isinstance(ingredient_id, Ingredient):
+            #     ingredient_id = ingredient_id.id
+            # elif not isinstance(ingredient_id, int):
+            #     raise ValidationError('ID ингредиента должен быть числом!')
             if ingredient_id in ingredients:
                 raise ValidationError('Ингредиенты не могут повторяться!')
             if int(item['amount']) <= 0:
@@ -280,57 +282,18 @@ class RecipeCreateSerializer(ModelSerializer):
                     'Количество ингредиента должно быть больше 0!'
                 )
             ingredients.add(ingredient_id)
-            ingredient_ids.append(ingredient_id)
         return value
-    # Проверка на существование ингредиентов
-        # non_exist_ingredients = []
-        # for ingredient_id in ingredient_ids:
-        #     if not IngredientRecipe.objects.filter(id=ingredient_id).exists():
-        #         non_exist_ingredients.append(ingredient_id)
-
-        # if non_exist_ingredients:
-        #     raise ValidationError(
-        #         f'Ингредиент с ID {", ".join(map(str, non_exist_ingredients))}'
-        #         f' не существует!'
-        #     )
-
-        # if not obj.get('tags'):
-        #     raise ValidationError('Нужно выбрать хотя бы один тег!')
-
-        # if not obj.get('ingredients'):
-        #     raise ValidationError(
-        #         'Нужен хотя бы один ингредиент!'
-        #     )
-        # inrgedients = [item['id'] for item in obj.get('ingredients')]
-        # unique_ingredients = set(inrgedients)
-        # if len(inrgedients) != len(unique_ingredients):
-        #     raise ValidationError(
-        #         'Ингредиенты не должны повторяться!'
-        #     )
-        # return obj
 
     def validate_tags(self, value):
+        """Валидация по тегам."""
         if not value:
             raise ValidationError('Нужно выбрать хотя бы один тег!')
         if len(value) != len(set(value)):
             raise ValidationError('Теги должны быть уникальными!')
         return value
 
-    # def validate_ingredients(self, value):
-    #     if not value:
-    #         raise ValidationError('Нужен хотя бы один ингредиент!')
-    #     ingredients = set()
-    #     for item in value:
-    #         if item['id'] in ingredients:
-    #             raise ValidationError('Ингредиенты не могут повторяться!')
-    #         if int(item['amount']) <= 0:
-    #             raise ValidationError(
-    #                 'Количество ингредиента должно быть больше 0!'
-    #             )
-    #         ingredients.add(item['id'])
-    #     return value
-
     def validate_cooking_time(self, value):
+        """Валидация по времени приготовления."""
         if value < 1:
             raise ValidationError(
                 'Время приготовления не меньше одной минуты')
@@ -345,37 +308,16 @@ class RecipeCreateSerializer(ModelSerializer):
         self.create_ingredients_amounts(ingredients, recipe)
         return recipe
 
-    def update(self, instance, validated_data):
-        """Метод изменения рецепта."""
-        tags = validated_data.pop('tags', [])
-        ingredients = validated_data.pop('ingredients', [])
-        if tags:
-            instance.tags.set(tags)
-
-        current_ingredient_ids = set(instance.ingredients
-                                     .values_list('ingredient__id', flat=True))
-
-        new_ingredient_ids = {ingredient_data['id'] for ingredient_data
-                              in ingredients}
-
-        for ingr_id in current_ingredient_ids - new_ingredient_ids:
-            IngredientRecipe.objects.filter(ingredient_id=ingr_id,
-                                            recipe=instance).delete()
-
-        for ingredient_data in ingredients:
-            # ingredient_instance = get_object_or_404(
-            #     Ingredient,
-            #     pk=ingredient_data['id']
-            # )
-            ingr_recipe, created = IngredientRecipe.objects.get_or_create(
-                ingredient=ingredient_data.get('id'),
-                recipe=instance,
-                defaults={'amount': ingredient_data['amount']}
-            )
-            if not created:
-                ingr_recipe.amount = ingredient_data['amount']
-                ingr_recipe.save()
-        return super().update(instance, validated_data)
+    def update(self, recipe, validated_data):
+        """Метод редактирования рецепта."""
+        if 'tags' in validated_data:
+            tags = validated_data.pop('tags')
+            recipe.tags.set(tags)
+        if 'ingredients' in validated_data:
+            ingredients = validated_data.pop('ingredients')
+            recipe.ingredients.clear()
+            self.create_ingredients_amounts(ingredients, recipe)
+        return super().update(recipe, validated_data)
 
     @staticmethod
     def create_ingredients_amounts(ingredients, recipe):
@@ -383,15 +325,14 @@ class RecipeCreateSerializer(ModelSerializer):
         ingredient_objects = []
         for ingredient_data in ingredients:
             ingredient_objects.append(IngredientRecipe(
-                ingredient=ingredient_data.get('id'),
+                ingredient=ingredient_data['id'],
                 recipe=recipe,
                 amount=ingredient_data['amount'],
             ))
         IngredientRecipe.objects.bulk_create(ingredient_objects)
 
     def to_representation(self, recipe):
-        request = self.context.get('request')
-        context = {'request': request}
+        context = {'request': self.context.get('request')}
         return RecipeReadSerializer(recipe, context=context).data
 
 
@@ -406,6 +347,7 @@ class ShoppingCartSerializer(ModelSerializer):
         )
 
     def validate(self, attrs):
+        """Валидация добавления в покупки."""
         user = attrs['user']
         recipe = attrs['recipe']
         if user.shopping_user.filter(recipe=recipe).exists():
@@ -432,6 +374,7 @@ class FavoriteSerializer(ModelSerializer):
         )
 
     def validate(self, attrs):
+        """Валидация добавления в избранное."""
         user = attrs['user']
         recipe = attrs['recipe']
         if user.favorite_recipe.filter(recipe=recipe).exists():
