@@ -1,10 +1,11 @@
+"""Модуль фильтров."""
 from django_filters import ModelMultipleChoiceFilter
 from django_filters.rest_framework import filters, FilterSet
 from recipes.models import Ingredient, Recipe, Tag
 
 
 class IngredientFilter(FilterSet):
-    """Фильтр для ингредиентов."""
+    """Фильтр по названию для ингредиентов."""
     name = filters.CharFilter(lookup_expr='startswith')
 
     class Meta:
@@ -13,7 +14,7 @@ class IngredientFilter(FilterSet):
 
 
 class RecipeFilter(FilterSet):
-    """Фильтр для рецептов."""
+    """Фильтр для отображения рецептов."""
     tags = ModelMultipleChoiceFilter(field_name='tags__slug',
                                      to_field_name='slug',
                                      queryset=Tag.objects.all())
@@ -24,12 +25,8 @@ class RecipeFilter(FilterSet):
 
     class Meta:
         model = Recipe
-        fields = (
-            'author',
-            'is_favorited',
-            'is_in_shopping_cart',
-            'tags'
-        )
+        fields = ('author', 'tags', 'is_favorited',
+                  'is_in_shopping_cart')
 
     def filter_is_favorited(self, queryset, name, value):
         """Метод для избранного."""

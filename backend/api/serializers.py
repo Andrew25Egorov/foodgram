@@ -6,25 +6,20 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.fields import IntegerField, SerializerMethodField
 from rest_framework.relations import PrimaryKeyRelatedField
 from rest_framework.serializers import ModelSerializer, ReadOnlyField
-# from rest_framework.validators import UniqueTogetherValidator
-# from django.db import transaction
-# from django.shortcuts import get_object_or_404
 
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
 from users.models import Subscribe, User
 
-# -----------------------------------------------------------------------------
-#                            Приложение users
-# -----------------------------------------------------------------------------
+#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                |      Приложение users       |
+#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 class AvatarSerializer(UserSerializer):
     """Аватар."""
 
-    avatar = Base64ImageField(required=True,
-                              max_length=None,
-                              allow_empty_file=False)
+    avatar = Base64ImageField(required=True)
 
     class Meta:
         model = User
@@ -39,7 +34,7 @@ class AvatarSerializer(UserSerializer):
 
 
 class UserReadSerializer(UserSerializer):
-    """Сериализатор для чтения информации о пользователе и подписке."""
+    """Чтение информации о пользователе и подписке."""
 
     is_subscribed = SerializerMethodField(read_only=True)
 
@@ -68,19 +63,8 @@ class UserCreateSerializers(UserCreateSerializer):
                   'first_name', 'last_name', 'password')
 
 
-class RecipeSerializer(ModelSerializer):
-    """Список рецептов без ингредиентов."""
-
-    image = Base64ImageField(max_length=None, allow_empty_file=False)
-
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-        read_only_fields = ('name', 'image', 'cooking_time')
-
-
 class SubscriptionsSerializer(UserReadSerializer):
-    """Список авторов на которых подписан пользователь."""
+    """Список авторов, на которых подписан пользователь."""
 
     recipes = SerializerMethodField()
     recipes_count = SerializerMethodField()
@@ -119,10 +103,7 @@ class SubscribeSerializer(ModelSerializer):
 
     class Meta:
         model = Subscribe
-        fields = (
-            'user',
-            'author'
-        )
+        fields = ('user', 'author')
 
     def validate(self, attrs):
         """Валидация подписки."""
@@ -144,9 +125,9 @@ class SubscribeSerializer(ModelSerializer):
             context={'request': self.context.get('request')}
         ).data
 
-# -----------------------------------------------------------------------------
-#                            Приложение recipes
-# -----------------------------------------------------------------------------
+#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#                |      Приложение recipes     |
+#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 class IngredientSerializer(ModelSerializer):
@@ -163,6 +144,17 @@ class TagSerializer(ModelSerializer):
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
+
+
+class RecipeSerializer(ModelSerializer):
+    """Список рецептов без ингредиентов."""
+
+    image = Base64ImageField()
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+        read_only_fields = ('name', 'image', 'cooking_time')
 
 
 class RecipeIngredientSerializer(ModelSerializer):
@@ -196,7 +188,6 @@ class RecipeReadSerializer(ModelSerializer):
                   'is_favorited', 'is_in_shopping_cart',
                   'name', 'image',
                   'text', 'cooking_time')
-#        read_only_fields = ('author', 'tags',)
 
     def get_ingredients(self, obj):
         """Получение списка ингредиентов."""
@@ -223,7 +214,7 @@ class RecipeReadSerializer(ModelSerializer):
 
 
 class RecipeIngredientCreateSerializer(ModelSerializer):
-    """Ингредиент и количество для создания рецепта."""
+    """Ингредиент с количеством для создания рецепта."""
 
     id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all(),
                                 write_only=True)
@@ -237,7 +228,6 @@ class RecipeCreateSerializer(ModelSerializer):
     """Создание, изменение или удаление рецепта."""
 
     author = UserReadSerializer(read_only=True)
-    id = ReadOnlyField()
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = RecipeIngredientCreateSerializer(many=True)
     image = Base64ImageField()
@@ -331,9 +321,9 @@ class RecipeCreateSerializer(ModelSerializer):
             ))
         IngredientRecipe.objects.bulk_create(ingredient_objects)
 
-    def to_representation(self, recipe):
-        context = {'request': self.context.get('request')}
-        return RecipeReadSerializer(recipe, context=context).data
+    # def to_representation(self, recipe):
+    #     context = {'request': self.context.get('request')}
+    #     return RecipeReadSerializer(recipe, context=context).data
 
 
 class ShoppingCartSerializer(ModelSerializer):

@@ -20,7 +20,7 @@ from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
 from users.models import Subscribe, User
 from .filters import IngredientFilter, RecipeFilter
 from .pagination import CustomPaginator
-from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (AvatarSerializer, IngredientSerializer,
                           RecipeCreateSerializer, RecipeReadSerializer,
                           RecipeSerializer, SubscribeSerializer,
@@ -263,5 +263,4 @@ class RecipeViewSet(ModelViewSet):
         filename = f'{user.username}_shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename={filename}'
-
         return response
