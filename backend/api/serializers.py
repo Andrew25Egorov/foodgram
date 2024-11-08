@@ -105,19 +105,19 @@ class SubscribeSerializer(ModelSerializer):
         model = Subscribe
         fields = ('user', 'author')
 
-    def validate(self, attrs):
-        """Валидация подписки."""
-        user = attrs['user']
-        author = attrs['author']
-        if user == author:
-            raise ValidationError(
-                {'author': 'Нельзя подписаться на себя.'}
-            )
-        if user.subscriber.filter(author=author).exists():
-            raise ValidationError(
-                {'author': 'Уже подписан.'}
-            )
-        return attrs
+    # def validate(self, attrs):
+    #     """Валидация подписки."""
+    #     user = attrs['user']
+    #     author = attrs['author']
+    #     if user == author:
+    #         raise ValidationError(
+    #             {'author': 'Нельзя подписаться на себя.'}
+    #         )
+    #     if user.subscriber.filter(author=author).exists():
+    #         raise ValidationError(
+    #             {'author': 'Уже подписан.'}
+    #         )
+    #     return attrs
 
     def to_representation(self, instance):
         return SubscriptionsSerializer(
@@ -298,28 +298,56 @@ class RecipeCreateSerializer(ModelSerializer):
         self.create_ingredients_amounts(ingredients, recipe)
         return recipe
 
+    # def update(self, recipe, validated_data):
+    #     """Метод редактирования рецепта."""
+    #     if 'tags' in validated_data:
+    #         tags = validated_data.pop('tags')
+    #         recipe.tags.set(tags)
+    #     if 'ingredients' in validated_data:
+    #         ingredients = validated_data.pop('ingredients')
+    #         recipe.ingredients.clear()
+    #         self.create_ingredients_amounts(ingredients, recipe)
+    #     return super().update(recipe, validated_data)
+
     def update(self, recipe, validated_data):
         """Метод редактирования рецепта."""
         if 'tags' in validated_data:
-            tags = validated_data.pop('tags')
-            recipe.tags.set(tags)
+            recipe.tags.set(validated_data.pop('tags'))
+
         if 'ingredients' in validated_data:
-            ingredients = validated_data.pop('ingredients')
-            recipe.ingredients.clear()
-            self.create_ingredients_amounts(ingredients, recipe)
+            new_ingr = validated_data.pop('ingredients')
+            exist_ids = set(recipe.ingredients.values_list('id', flat=True))
+            new_ids = {i['id'] for i in new_ingr}
+
+            IngredientRecipe.objects.filter(
+                recipe=recipe,
+                ingredient__id__in=exist_ids - new_ids
+            ).delete()
+
+            self.create_ingredients_amounts(
+                [i for i in new_ingr if i['id'] in new_ids - exist_ids],
+                recipe
+            )
         return super().update(recipe, validated_data)
 
     @staticmethod
     def create_ingredients_amounts(ingredients, recipe):
         """Добавление ингредиентов с количеством."""
-        ingredient_objects = []
-        for ingredient_data in ingredients:
-            ingredient_objects.append(IngredientRecipe(
-                ingredient=ingredient_data['id'],
-                recipe=recipe,
-                amount=ingredient_data['amount'],
-            ))
-        IngredientRecipe.objects.bulk_create(ingredient_objects)
+        IngredientRecipe.objects.bulk_create([
+            IngredientRecipe(ingredient=i['id'],
+                             recipe=recipe,
+                             amount=i['amount'])
+            for i in ingredients
+        ])
+
+        # ingredient_objects = []
+        # for ingredient_data in ingredients:
+        #     ingredient_objects.append(IngredientRecipe(
+        #         ingredient=ingredient_data['id'],
+        #         recipe=recipe,
+        #         amount=ingredient_data['amount'],
+        #     ))
+        # IngredientRecipe.objects.bulk_create(ingredient_objects)
 
     # def to_representation(self, recipe):
     #     context = {'request': self.context.get('request')}
