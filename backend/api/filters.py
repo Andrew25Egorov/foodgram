@@ -9,6 +9,8 @@ class IngredientFilter(FilterSet):
     name = filters.CharFilter(lookup_expr='startswith')
 
     class Meta:
+        """Класс Meta."""
+
         model = Ingredient
         fields = ['name']
 
@@ -24,6 +26,8 @@ class RecipeFilter(FilterSet):
         method='filter_is_in_shopping_cart')
 
     class Meta:
+        """Класс Meta."""
+
         model = Recipe
         fields = ('author', 'tags', 'is_favorited',
                   'is_in_shopping_cart')

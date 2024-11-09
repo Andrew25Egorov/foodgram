@@ -22,6 +22,8 @@ class AvatarSerializer(UserSerializer):
     avatar = Base64ImageField(required=True)
 
     class Meta:
+        """Класс Meta."""
+
         model = User
         fields = ('avatar',)
 
@@ -39,6 +41,8 @@ class UserReadSerializer(UserSerializer):
     is_subscribed = SerializerMethodField(read_only=True)
 
     class Meta:
+        """Класс Meta."""
+
         model = User
         fields = ('email', 'id', 'username',
                   'first_name', 'last_name',
@@ -58,6 +62,8 @@ class UserCreateSerializers(UserCreateSerializer):
     """Создание нового пользователя."""
 
     class Meta:
+        """Класс Meta."""
+
         model = User
         fields = ('id', 'email', 'username',
                   'first_name', 'last_name', 'password')
@@ -70,6 +76,8 @@ class SubscriptionsSerializer(UserReadSerializer):
     recipes_count = SerializerMethodField()
 
     class Meta(UserReadSerializer.Meta):
+        """Класс Meta."""
+
         fields = ('email', 'id', 'avatar',
                   'username', 'first_name',
                   'last_name', 'is_subscribed',
@@ -102,22 +110,10 @@ class SubscribeSerializer(ModelSerializer):
     """Подписка на автора."""
 
     class Meta:
+        """Класс Meta."""
+
         model = Subscribe
         fields = ('user', 'author')
-
-    # def validate(self, attrs):
-    #     """Валидация подписки."""
-    #     user = attrs['user']
-    #     author = attrs['author']
-    #     if user == author:
-    #         raise ValidationError(
-    #             {'author': 'Нельзя подписаться на себя.'}
-    #         )
-    #     if user.subscriber.filter(author=author).exists():
-    #         raise ValidationError(
-    #             {'author': 'Уже подписан.'}
-    #         )
-    #     return attrs
 
     def to_representation(self, instance):
         return SubscriptionsSerializer(
@@ -134,6 +130,8 @@ class IngredientSerializer(ModelSerializer):
     """Список ингредиентов с единицами измерения."""
 
     class Meta:
+        """Класс Meta."""
+
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit')
 
@@ -142,6 +140,8 @@ class TagSerializer(ModelSerializer):
     """Список тегов."""
 
     class Meta:
+        """Класс Meta."""
+
         model = Tag
         fields = ('id', 'name', 'slug')
 
@@ -152,6 +152,8 @@ class RecipeSerializer(ModelSerializer):
     image = Base64ImageField()
 
     class Meta:
+        """Класс Meta."""
+
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
         read_only_fields = ('name', 'image', 'cooking_time')
@@ -166,6 +168,8 @@ class RecipeIngredientSerializer(ModelSerializer):
         source='ingredient.measurement_unit')
 
     class Meta:
+        """Класс Meta."""
+
         model = IngredientRecipe
         fields = ('id', 'name',
                   'measurement_unit', 'amount')
@@ -182,6 +186,8 @@ class RecipeReadSerializer(ModelSerializer):
     image = Base64ImageField()
 
     class Meta:
+        """Класс Meta."""
+
         model = Recipe
         fields = ('id', 'tags',
                   'author', 'ingredients',
@@ -220,6 +226,8 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
                                 write_only=True)
 
     class Meta:
+        """Класс Meta."""
+
         model = IngredientRecipe
         fields = ('id', 'amount')
 
@@ -234,6 +242,8 @@ class RecipeCreateSerializer(ModelSerializer):
     cooking_time = IntegerField()
 
     class Meta:
+        """Класс Meta."""
+
         model = Recipe
         fields = ('id', 'ingredients',
                   'tags', 'author',
@@ -261,10 +271,6 @@ class RecipeCreateSerializer(ModelSerializer):
         ingredients = set()
         for item in value:
             ingredient_id = item['id']
-            # if isinstance(ingredient_id, Ingredient):
-            #     ingredient_id = ingredient_id.id
-            # elif not isinstance(ingredient_id, int):
-            #     raise ValidationError('ID ингредиента должен быть числом!')
             if ingredient_id in ingredients:
                 raise ValidationError('Ингредиенты не могут повторяться!')
             if int(item['amount']) <= 0:
@@ -298,17 +304,6 @@ class RecipeCreateSerializer(ModelSerializer):
         self.create_ingredients_amounts(ingredients, recipe)
         return recipe
 
-    # def update(self, recipe, validated_data):
-    #     """Метод редактирования рецепта."""
-    #     if 'tags' in validated_data:
-    #         tags = validated_data.pop('tags')
-    #         recipe.tags.set(tags)
-    #     if 'ingredients' in validated_data:
-    #         ingredients = validated_data.pop('ingredients')
-    #         recipe.ingredients.clear()
-    #         self.create_ingredients_amounts(ingredients, recipe)
-    #     return super().update(recipe, validated_data)
-
     def update(self, recipe, validated_data):
         """Метод редактирования рецепта."""
         if 'tags' in validated_data:
@@ -340,24 +335,17 @@ class RecipeCreateSerializer(ModelSerializer):
             for i in ingredients
         ])
 
-        # ingredient_objects = []
-        # for ingredient_data in ingredients:
-        #     ingredient_objects.append(IngredientRecipe(
-        #         ingredient=ingredient_data['id'],
-        #         recipe=recipe,
-        #         amount=ingredient_data['amount'],
-        #     ))
-        # IngredientRecipe.objects.bulk_create(ingredient_objects)
-
-    # def to_representation(self, recipe):
-    #     context = {'request': self.context.get('request')}
-    #     return RecipeReadSerializer(recipe, context=context).data
+    def to_representation(self, recipe):
+        context = {'request': self.context.get('request')}
+        return RecipeReadSerializer(recipe, context=context).data
 
 
 class ShoppingCartSerializer(ModelSerializer):
     """Добавление в список покупок."""
 
     class Meta:
+        """Класс Meta."""
+
         model = ShoppingCart
         fields = (
             'user',
@@ -385,6 +373,8 @@ class FavoriteSerializer(ModelSerializer):
     """Добавление в избранное."""
 
     class Meta:
+        """Класс Meta."""
+
         model = Favorite
         fields = (
             'user',
