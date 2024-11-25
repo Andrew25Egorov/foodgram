@@ -1,6 +1,7 @@
+"""Модуль настройки админ-панели."""
 from django.contrib import admin
 
-from .models import Subscribe, User
+from users.models import Subscribe, User
 
 
 @admin.register(User)

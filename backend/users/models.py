@@ -1,7 +1,10 @@
+"""Модели приложения users."""
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import Model, UniqueConstraint
+
+from foodgram import constants
 
 
 class User(AbstractUser):
@@ -11,21 +14,27 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['first_name', 'last_name', 'username']
 
     username = models.CharField(
-        max_length=150,
+        max_length=constants.USERNAME_MAX_LENGTH,
         unique=True,
         help_text='Укажите username',
         validators=[UnicodeUsernameValidator()],
     )
     email = models.EmailField(
         unique=True,
-        max_length=254,
+        max_length=constants.EMAIL_MAX_LENGTH,
         verbose_name='Электронная почта',
         help_text='Укажите электронную почту',
     )
-    first_name = models.CharField(verbose_name='Имя', max_length=150,
-                                  help_text='Укажите имя')
-    last_name = models.CharField(verbose_name='Фамилия', max_length=150,
-                                 help_text='Укажите фамилию')
+    first_name = models.CharField(
+        verbose_name='Имя',
+        max_length=constants.FIRST_NAME_MAX_LENGTH,
+        help_text='Укажите имя'
+    )
+    last_name = models.CharField(
+        verbose_name='Фамилия',
+        max_length=constants.LAST_NAME_MAX_LENGTH,
+        help_text='Укажите фамилию'
+    )
     avatar = models.ImageField(
         upload_to='avatar/',
         null=True,
@@ -34,7 +43,7 @@ class User(AbstractUser):
 
     class Meta:
         """Класс Meta для модели User."""
-        ordering = ['id']
+        ordering = ['username']
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
@@ -42,7 +51,7 @@ class User(AbstractUser):
         return self.username
 
 
-class Subscribe(models.Model):
+class Subscribe(Model):
     """Модель подписки на автора."""
     user = models.ForeignKey(
         User,
@@ -59,7 +68,7 @@ class Subscribe(models.Model):
 
     class Meta:
         """Класс Meta для модели Subscribe."""
-        ordering = ['-id']
+        ordering = ['user']
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         constraints = [

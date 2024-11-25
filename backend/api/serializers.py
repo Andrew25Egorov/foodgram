@@ -1,12 +1,13 @@
 """Модуль сериализаторов."""
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import IntegerField, SerializerMethodField
 from rest_framework.relations import PrimaryKeyRelatedField
-from rest_framework.serializers import ModelSerializer, ReadOnlyField
+from rest_framework.serializers import (ModelSerializer, ReadOnlyField,
+                                        UniqueTogetherValidator)
 
+from foodgram import constants
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
 from users.models import Subscribe, User
@@ -95,13 +96,7 @@ class SubscriptionsSerializer(UserReadSerializer):
         limit = request.GET.get('recipes_limit', None)
         recipes = author.recipes.all()
         if limit is not None:
-            try:
-                recipes = recipes[:int(limit)]
-            except ValueError:
-                raise ValidationError(
-                    detail='Неверный формат лимита рецептов!',
-                    code=status.HTTP_400_BAD_REQUEST
-                )
+            recipes = recipes[:int(limit)]
         serializer = RecipeSerializer(recipes, many=True, read_only=True)
         return serializer.data
 
@@ -114,12 +109,25 @@ class SubscribeSerializer(ModelSerializer):
 
         model = Subscribe
         fields = ('user', 'author')
+        validators = [UniqueTogetherValidator(
+            queryset=Subscribe.objects.all(),
+            fields=('user', 'author'),
+            message='Вы уже подписаны на этого автора.')
+        ]
+
+    def validate(self, data):
+        """Валидация подписки на себя."""
+        if self.context['request'].user == data['author']:
+            raise ValidationError('Нельзя подписаться на самого себя.')
+        return data
 
     def to_representation(self, instance):
+        """Метод представления данных."""
         return SubscriptionsSerializer(
             instance.author,
             context={'request': self.context.get('request')}
         ).data
+
 
 #                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #                |      Приложение recipes     |
@@ -231,6 +239,21 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
         model = IngredientRecipe
         fields = ('id', 'amount')
 
+    def validate_amount(self, value):
+        """Валидация по количеству ингредиента."""
+        if not isinstance(value, int):
+            raise ValidationError(
+                'Количество ингредиента должно быть целым числом.')
+        if value < constants.AMOUNT_MIN_VALUE:
+            raise ValidationError(
+                f'Количество ингредиента должно быть не менее '
+                f'{constants.AMOUNT_MIN_VALUE} единицы измерения.')
+        if value > constants.AMOUNT_MAХ_VALUE:
+            raise ValidationError(
+                f'Количество ингредиента должно быть не более '
+                f'{constants.AMOUNT_MAХ_VALUE} единиц измерения.')
+        return value
+
 
 class RecipeCreateSerializer(ModelSerializer):
     """Создание, изменение или удаление рецепта."""
@@ -273,10 +296,6 @@ class RecipeCreateSerializer(ModelSerializer):
             ingredient_id = item['id']
             if ingredient_id in ingredients:
                 raise ValidationError('Ингредиенты не могут повторяться!')
-            if int(item['amount']) <= 0:
-                raise ValidationError(
-                    'Количество ингредиента должно быть больше 0!'
-                )
             ingredients.add(ingredient_id)
         return value
 
@@ -290,9 +309,17 @@ class RecipeCreateSerializer(ModelSerializer):
 
     def validate_cooking_time(self, value):
         """Валидация по времени приготовления."""
-        if value < 1:
+        if not isinstance(value, int):
             raise ValidationError(
-                'Время приготовления не меньше одной минуты')
+                'Время приготовления должно быть целым числом минут.')
+        if value < constants.COOKING_TIME_MIN_VALUE:
+            raise ValidationError(
+                f'Время приготовления должно быть не менее '
+                f'{constants.COOKING_TIME_MIN_VALUE} минуты.')
+        if value > constants.COOKING_TIME_MAX_VALUE:
+            raise ValidationError(
+                f'Время приготовления должно быть не более '
+                f'{constants.COOKING_TIME_MAX_VALUE} минут.')
         return value
 
     def create(self, validated_data):
@@ -336,6 +363,7 @@ class RecipeCreateSerializer(ModelSerializer):
         ])
 
     def to_representation(self, recipe):
+        """Метод представления данных."""
         context = {'request': self.context.get('request')}
         return RecipeReadSerializer(recipe, context=context).data
 
@@ -356,13 +384,14 @@ class ShoppingCartSerializer(ModelSerializer):
         """Валидация добавления в покупки."""
         user = attrs['user']
         recipe = attrs['recipe']
-        if user.shopping_user.filter(recipe=recipe).exists():
+        if user.shopping_recipe.filter(recipe=recipe).exists():
             raise ValidationError(
                 {'recipe': 'Уже есть в списке.'}
             )
         return attrs
 
     def to_representation(self, instance):
+        """Метод представления данных."""
         return RecipeSerializer(
             instance.recipe,
             context={'request': self.context.get('request')}
@@ -392,6 +421,7 @@ class FavoriteSerializer(ModelSerializer):
         return attrs
 
     def to_representation(self, instance):
+        """Метод представления данных."""
         return RecipeSerializer(
             instance.recipe,
             context={'request': self.context.get('request')}

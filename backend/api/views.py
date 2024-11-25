@@ -1,8 +1,5 @@
 """Модуль вьюсетов."""
-from datetime import datetime
-
 from django.db.models import Sum
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
@@ -15,17 +12,18 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from shortlink.models import ShortLink
 
+from api.filters import IngredientFilter, RecipeFilter
+from api.pagination import CustomPaginator
+from api.permissions import IsAuthorOrReadOnly
+from api.serializers import (AvatarSerializer, IngredientSerializer,
+                             RecipeCreateSerializer, RecipeReadSerializer,
+                             RecipeSerializer, SubscribeSerializer,
+                             SubscriptionsSerializer, TagSerializer,
+                             UserReadSerializer)
+from api.utils import shopping_cart_txt
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
 from users.models import Subscribe, User
-from .filters import IngredientFilter, RecipeFilter
-from .pagination import CustomPaginator
-from .permissions import IsAuthorOrReadOnly
-from .serializers import (AvatarSerializer, IngredientSerializer,
-                          RecipeCreateSerializer, RecipeReadSerializer,
-                          RecipeSerializer, SubscribeSerializer,
-                          SubscriptionsSerializer, TagSerializer,
-                          UserReadSerializer)
 
 
 class CustomUserViewSet(UserViewSet):
@@ -43,42 +41,35 @@ class CustomUserViewSet(UserViewSet):
 
     @action(
         detail=True,
-        methods=('post', 'delete'),
+        methods=('post',),
         permission_classes=(IsAuthenticated,)
     )
     def subscribe(self, request, id):
         """Подписка на автора."""
         author = get_object_or_404(User, id=id)
-        user = self.request.user
-        subscribing = Subscribe.objects.filter(user=user, author=author)
-
-        if self.request.method == 'POST':
-            if user == author:
-                return Response(
-                    {'errors': 'Нельзя подписаться или отписаться от себя!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            if subscribing.exists():
-                return Response(
-                    {'errors': 'Вы уже подписаны на этого автора!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            queryset = Subscribe.objects.create(user=user, author=author)
-            serializer = SubscribeSerializer(
-                queryset, context={'request': request}
-            )
+        serializer = SubscribeSerializer(
+            data={'user': request.user.id, 'author': author.id},
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if request.method == 'DELETE':
-            if not subscribing.exists():
-                return Response(
-                    {'errors': 'Вы уже отписаны от этого автора!'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            subscribing.delete()
+    @subscribe.mapping.delete
+    def delete_subscribe(self, request, id=None):
+        """Удаление подписки."""
+        author = get_object_or_404(User, id=id)
+        user = self.request.user
+        subscribe = Subscribe.objects.filter(user=user, author=author)
+        if subscribe.exists():
+            subscribe.delete()
             return Response({'detail': 'Вы успешно отписались!'},
                             status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return Response(
+            {'errors': 'Вы не подписаны на этого автора!'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     @action(
         detail=False,
@@ -103,13 +94,6 @@ class CustomUserViewSet(UserViewSet):
     def avatar(self, request, *args, **kwargs):
         """Добавление и обновление аватара пользователя."""
         serializer = AvatarSerializer(request.user, data=request.data)
-
-        if 'avatar' not in request.data:
-            return Response(
-                {'errors': 'Поле avatar обязательное.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -149,7 +133,7 @@ class TagViewSet(ReadOnlyModelViewSet):
 class RecipeViewSet(ModelViewSet):
     """Вьюсет рецептов."""
     queryset = Recipe.objects.all()
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = [IsAuthorOrReadOnly & IsAuthenticatedOrReadOnly]
     pagination_class = CustomPaginator
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
@@ -248,19 +232,4 @@ class RecipeViewSet(ModelViewSet):
             'ingredient__name',
             'ingredient__measurement_unit'
         ).annotate(amount=Sum('amount'))
-        today = datetime.today()
-        shopping_list = (
-            f'Список покупок для: {user.get_full_name()}\n\n'
-            f'Дата: {today:%Y-%m-%d}\n\n'
-        )
-        shopping_list += '\n'.join([
-            f'- {ingredient["ingredient__name"]} '
-            f'({ingredient["ingredient__measurement_unit"]})'
-            f' - {ingredient["amount"]}'
-            for ingredient in ingredients
-        ])
-        shopping_list += f'\n\nсформировано сервисом "Foodgram" ({today:%Y})'
-        filename = f'{user.username}_shopping_list.txt'
-        response = HttpResponse(shopping_list, content_type='text/plain')
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        return response
+        return shopping_cart_txt(self, request, ingredients)
