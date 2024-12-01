@@ -1,7 +1,7 @@
 # version: '3'
 
 volumes:
-  pg_data:
+  pg_data_prod:
   static_vol:
   media_vol:
 
@@ -11,14 +11,11 @@ services:
     image: postgres:13
     env_file: ./.env
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data_prod:/var/lib/postgresql/data
 
   backend:
     container_name: foodgram_back
     image: and2510/foodgram_back
-    # build: ../backend/
-    # volumes:
-    #   - ../backend/:/app/
     env_file: ./.env
     volumes:
       - static_vol:/backend_static
@@ -29,26 +26,21 @@ services:
   frontend:
     container_name: foodgram_front
     image: and2510/foodgram_front
-    # build: ../frontend
     env_file: ./.env
-    # command: cp -r /app/build/. /frontend_static/
-    # volumes:
-    #   - static_vol:/frontend_static
+    command: cp -r /app/build/. /frontend_static/
     volumes:
-      - ../frontend/:/app/result_build/
+      - static_vol:/frontend_static
+    depends_on:
+      - backend
+  
   nginx:
     container_name: foodgram_proxy
     image: and2510/foodgram_proxy
     ports:
       - "8000:80"
     volumes:
-      # - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../frontend/build:/usr/share/nginx/html/
-      - ../docs/:/usr/share/nginx/html/api/docs/
-      # - static_vol:/var/html/staticfiles/
-      # - media_vol:/var/html/media/
       - static_vol:/static
       - media_vol:/app/media
+      - ./docs/:/usr/share/nginx/html/api/docs/
     depends_on:
-      - frontend
-
+      - backend
