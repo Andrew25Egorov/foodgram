@@ -16,8 +16,6 @@ services:
   backend:
     container_name: foodgram_back
     build: ../backend/
-    # volumes:
-    #   - ../backend/:/app/
     env_file: .env
     volumes:
       - static_vol:/backend_static
@@ -32,14 +30,12 @@ services:
     command: cp -r /app/build/. /frontend_static/
     volumes:
       - static_vol:/frontend_static
-    # volumes:
-    #   - ../frontend/:/app/result_build/
-  # depends_on:
-  #     - backend
+    depends_on:
+      - backend
   
   nginx:
     build: .
-#    env_file: .env
+    env_file: .env
     ports:
       - 8000:80
     volumes:
@@ -63,4 +59,3 @@ services:
   #     - media_vol:/app/media
   #   # depends_on:
   #   #   - frontend
-
