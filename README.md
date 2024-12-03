@@ -1,21 +1,40 @@
 # Foodgram
-![badge](https://github.com/Andrew25Egorov/kittygram_final/actions/workflows/main.yml/badge.svg)
+![badge](https://github.com/Andrew25Egorov/foodgram/actions/workflows/main.yml/badge.svg)
 
 ## Описание проекта:
-Kittygram — социальная сеть для любителей котов и котиков.
-Это рабочий сервис, который состоит из бэкенд-приложения на Django и фронтенд-приложения на React.
-Проект позволяет:
-- Добавлять, просматривать, редактировать и удалять фотографии своих котов.
-- Добавлять новые и присваивать уже существующие достижения. 
-- Просматривать чужих котов и их достижения.
+«Foodgram» (Продуктовый помошник) — это сайт для размещения различных кулинарных рецептов, на котором зарегистрированные пользователи могут публиковать свои интересные рецепты, добавлять любые рецепты в избранное и подписываться на других авторов. Пользователям сайта также  доступен сервис «Список покупок». Он позволяет создать список продуктов с количеством, которые нужно купить для приготовления выбранных на сайте блюд. Для удобства навигации по сайту и просмотра рецептов, они могут быть отфильтрованы по различным тэгами.
+
+![](https://pictures.s3.yandex.net/resources/image_1711954469.png)
+
+**Поставленная задача — написать бэкенд в виде REST API для веб-приложения «Фудграм», а также опубликовать это веб-приложение на виртуальном удалённом сервере.**
+
+**Этапы выполнения задачи:**
+
+1. Создание Restful API.
+2. Запуск проекта в контейнерах.
+3. Подключение СУБД PostgreSQL.
+4. Создание volumes для сохранения загруженной информации.
+5. Получение доменного имени и SSL-сертификата для безопасного протокола передачи данных.
+6. Деплой на сервер с настройкой nginx и Gunicorn.
+7. Непрерывная CI/CD посредством GitHub Actions.
 
 ## СТЕК технологий:
 
+![image](https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue)
+![image](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![image](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=green)
+![image](https://img.shields.io/badge/django%20rest-ff1709?style=for-the-badge&logo=django&logoColor=white)
+![image](https://img.shields.io/badge/VSCode-0078D4?style=for-the-badge&logo=visual%20studio%20code&logoColor=white)
+![image](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)
+![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![image](https://img.shields.io/badge/DockerHub-1488C6?style=for-the-badge&logo=docker&logoColor=white)
+![image](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![image](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
+![image](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
+![image](https://img.shields.io/badge/Gunicorn-00A98F?style=for-the-badge&logo=gunicorn&logoColor=white)
+![GitHubActions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
 
-
-
-
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![Django](https://img.shields.io/badge/django-%23092E20.svg?style=for-the-badge&logo=django&logoColor=white) ![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray) ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![Nginx](https://img.shields.io/badge/nginx-%23009639.svg?style=for-the-badge&logo=nginx&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) ![React](https://img.shields.io/badge/react%20-%2320232a.svg?&style=for-the-badge&logo=react&logoColor=%2361DAFB)  ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white) ![GitHubActions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
 
 * Python == 3.9.13
 * Django == 3.2.3
@@ -25,16 +44,16 @@ Kittygram — социальная сеть для любителей котов
 * Docker
 * PostgreSQL
 
-## Работа по проекту:
+**Поставленная задача — написать бэкенд в виде REST API для веб-приложения «Фудграм», а также опубликовать это веб-приложение на виртуальном удалённом сервере. Этапы работы по проекту:**
 
--  Получено доменное имя
--  На удаленный сервер был установлен Git, Docker
--  Был связан аккаунт на GitHub и на DockerHub с удаленным сервером
--  Были созданы образы для бэкенд, фронтенд приложений
--  Настроена совместная работа контейнеров бэкэнда и базы данных
--  Настроен веб-сервер Nginx для перенаправления запросов и работы со статикой проекта
--  Подключено шифрование запросов по протоколу HTTPS
--  Автоматизировано тестирование и деплой проекта Kittygram с помощью GitHub Actions
+1. Создание Restful API.
+2. Запуск проекта в контейнерах.
+3. Подключение СУБД PostgreSQL.
+4. Создание volumes для сохранения загруженной информации.
+5. Получение доменного имени и SSL-сертификата для безопасного протокола передачи данных.
+6. Деплой на сервер с настройкой nginx и Gunicorn.
+7. Непрерывная CI/CD посредством GitHub Actions.
+
  ### Смотреть развернутый проект    <https://andrewegorov.ru/>
 
 
@@ -43,7 +62,7 @@ Kittygram — социальная сеть для любителей котов
 1. Файл workflow находится в директории
 
     ```bash
-    kittygram/.github/workflows/main.yml
+    foodgram/.github/workflows/main.yml
     ```
 
 2. Для адаптации его на своем сервере добавьте секреты в GitHub Actions:
@@ -73,7 +92,7 @@ Kittygram — социальная сеть для любителей котов
 1. Клонируйте себе репозиторий: 
 
 ```bash 
-git clone git@github.com:Andrew25Egorov/kittygram.git
+git clone git@github.com:Andrew25Egorov/foodgram.git
 ```
 
 2. Выполните запуск:
