@@ -1,4 +1,3 @@
-"""Загрузка из csv файла."""
 import csv
 import os
 
@@ -22,7 +21,11 @@ class Command(BaseCommand):
     help = 'Загрузка из csv файла.'
 
     def handle(self, *args, **options):
-        path = os.path.join(settings.BASE_DIR, 'data\\ingredients.csv')
+        path = os.path.join(settings.BASE_DIR, 'ingredients.csv')
+        if not os.path.exists(path):
+            self.stdout.write(self.style.ERROR(f'Файл {path} не найден.'
+                                               'Убедитесь,что он существует.'))
+            return
         with open(path, 'r', encoding='utf-8') as file:
             row_count = sum(1 for row in file)
         with open(path, 'r', encoding='utf-8') as file:

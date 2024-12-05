@@ -1,4 +1,3 @@
-"""Модуль фильтров."""
 from django_filters import ModelMultipleChoiceFilter
 from django_filters.rest_framework import FilterSet, filters
 

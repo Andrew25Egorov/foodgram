@@ -1,4 +1,3 @@
-"""Модуль вьюсетов."""
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -23,7 +22,7 @@ from api.serializers import (AvatarSerializer, IngredientSerializer,
 from api.utils import shopping_cart_txt
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
-from users.models import Subscribe, User
+from users.models import User
 
 
 class CustomUserViewSet(UserViewSet):
@@ -51,17 +50,16 @@ class CustomUserViewSet(UserViewSet):
             data={'user': request.user.id, 'author': author.id},
             context={'request': request}
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
     def delete_subscribe(self, request, id=None):
         """Удаление подписки."""
         author = get_object_or_404(User, id=id)
         user = self.request.user
-        subscribe = Subscribe.objects.filter(user=user, author=author)
+        subscribe = user.subscriber.filter(author=author)
         if subscribe.exists():
             subscribe.delete()
             return Response({'detail': 'Вы успешно отписались!'},
@@ -94,10 +92,9 @@ class CustomUserViewSet(UserViewSet):
     def avatar(self, request, *args, **kwargs):
         """Добавление и обновление аватара пользователя."""
         serializer = AvatarSerializer(request.user, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @avatar.mapping.delete
     def delete_avatar(self, request, *args, **kwargs):
@@ -222,7 +219,7 @@ class RecipeViewSet(ModelViewSet):
     def download_shopping_cart(self, request):
         """Скачивание списка покупок."""
         user = request.user
-        if not ShoppingCart.objects.filter(user=user).exists():
+        if not user.shopping_recipe.filter(user=user).exists():
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         ingredients = IngredientRecipe.objects.filter(

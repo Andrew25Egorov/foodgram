@@ -1,4 +1,3 @@
-"""Константы backend."""
 # Модели Users
 FIRST_NAME_MAX_LENGTH = LAST_NAME_MAX_LENGTH = 150
 USERNAME_MAX_LENGTH = 150

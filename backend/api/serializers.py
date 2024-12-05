@@ -1,4 +1,3 @@
-"""Модуль сериализаторов."""
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework.exceptions import ValidationError
@@ -11,10 +10,6 @@ from foodgram import constants
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
 from users.models import Subscribe, User
-
-#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#                |      Приложение users       |
-#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 class AvatarSerializer(UserSerializer):
@@ -129,11 +124,6 @@ class SubscribeSerializer(ModelSerializer):
         ).data
 
 
-#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#                |      Приложение recipes     |
-#                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 class IngredientSerializer(ModelSerializer):
     """Список ингредиентов с единицами измерения."""
 
@@ -232,27 +222,14 @@ class RecipeIngredientCreateSerializer(ModelSerializer):
 
     id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all(),
                                 write_only=True)
+    amount = IntegerField(max_value=constants.AMOUNT_MAХ_VALUE,
+                          min_value=constants.AMOUNT_MIN_VALUE)
 
     class Meta:
         """Класс Meta."""
 
         model = IngredientRecipe
         fields = ('id', 'amount')
-
-    def validate_amount(self, value):
-        """Валидация по количеству ингредиента."""
-        if not isinstance(value, int):
-            raise ValidationError(
-                'Количество ингредиента должно быть целым числом.')
-        if value < constants.AMOUNT_MIN_VALUE:
-            raise ValidationError(
-                f'Количество ингредиента должно быть не менее '
-                f'{constants.AMOUNT_MIN_VALUE} единицы измерения.')
-        if value > constants.AMOUNT_MAХ_VALUE:
-            raise ValidationError(
-                f'Количество ингредиента должно быть не более '
-                f'{constants.AMOUNT_MAХ_VALUE} единиц измерения.')
-        return value
 
 
 class RecipeCreateSerializer(ModelSerializer):
@@ -262,7 +239,8 @@ class RecipeCreateSerializer(ModelSerializer):
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = RecipeIngredientCreateSerializer(many=True)
     image = Base64ImageField()
-    cooking_time = IntegerField()
+    cooking_time = IntegerField(max_value=constants.COOKING_TIME_MAX_VALUE,
+                                min_value=constants.COOKING_TIME_MIN_VALUE)
 
     class Meta:
         """Класс Meta."""
@@ -307,21 +285,6 @@ class RecipeCreateSerializer(ModelSerializer):
             raise ValidationError('Теги должны быть уникальными!')
         return value
 
-    def validate_cooking_time(self, value):
-        """Валидация по времени приготовления."""
-        if not isinstance(value, int):
-            raise ValidationError(
-                'Время приготовления должно быть целым числом минут.')
-        if value < constants.COOKING_TIME_MIN_VALUE:
-            raise ValidationError(
-                f'Время приготовления должно быть не менее '
-                f'{constants.COOKING_TIME_MIN_VALUE} минуты.')
-        if value > constants.COOKING_TIME_MAX_VALUE:
-            raise ValidationError(
-                f'Время приготовления должно быть не более '
-                f'{constants.COOKING_TIME_MAX_VALUE} минут.')
-        return value
-
     def create(self, validated_data):
         """Метод создания рецепта."""
         tags = validated_data.pop('tags')
@@ -337,19 +300,10 @@ class RecipeCreateSerializer(ModelSerializer):
             recipe.tags.set(validated_data.pop('tags'))
 
         if 'ingredients' in validated_data:
-            new_ingr = validated_data.pop('ingredients')
-            exist_ids = set(recipe.ingredients.values_list('id', flat=True))
-            new_ids = {i['id'] for i in new_ingr}
+            ingredients = validated_data.pop('ingredients')
+            recipe.ingredients.clear()
+            self.create_ingredients_amounts(ingredients, recipe)
 
-            IngredientRecipe.objects.filter(
-                recipe=recipe,
-                ingredient__id__in=exist_ids - new_ids
-            ).delete()
-
-            self.create_ingredients_amounts(
-                [i for i in new_ingr if i['id'] in new_ids - exist_ids],
-                recipe
-            )
         return super().update(recipe, validated_data)
 
     @staticmethod
